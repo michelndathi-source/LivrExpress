@@ -1614,6 +1614,13 @@ html.splash-active body > *:not(.splash):not(#splashOverlay) {
   background: #ecfdf5;
 }
 
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
 .admin-bulk-bar {
   display: flex;
   flex-wrap: wrap;
