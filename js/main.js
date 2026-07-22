@@ -30,104 +30,97 @@
     if (!gate.allowed) return; // redirection en cours
   }
 
-  // ——— Barre de navigation mobile (dock bas d’écran) ———
+  // ——— Barre de navigation mobile (dock bas) — design app ———
   const injectMobileDock = () => {
     if (document.getElementById("mobileDock")) return;
     const page = (
       window.location.pathname.split("/").pop() || "index.html"
     ).toLowerCase();
-    // pas de dock sur splash / auth pure
-    if (["splash.html", "login.html", "register.html"].includes(page)) return;
+
+    // Pas de dock : auth, splash, fiches techniques, admin desktop-first
+    const noDock = [
+      "splash.html",
+      "login.html",
+      "register.html",
+      "admin.html",
+      "fiche.html",
+      "livreur.html",
+    ];
+    if (noDock.includes(page)) return;
 
     const user = Auth ? Auth.getCurrentUser() : null;
     const staff = isStaff(user);
     const courier = isCourier(user);
-    const accountHref = staff
-      ? "admin.html"
-      : courier
-        ? "espace-livreur.html"
-        : user
-          ? "espace-client.html"
-          : "login.html";
-    const accountLabel = staff
-      ? "Admin"
-      : courier
-        ? "Livreur"
-        : user
-          ? "Compte"
-          : "Connexion";
-    const orderHref = user
-      ? staff
-        ? "admin.html"
-        : courier
-          ? "espace-livreur.html"
-          : "espace-client.html?commander=1"
-      : "login.html?next=" + encodeURIComponent("espace-client.html?commander=1");
 
-    const isActive = (names) =>
-      names.some((n) => page === n || page.startsWith(n.replace(".html", "")))
+    // 4 liens max, labels uniques, design cohérent
+    let items = [];
+    if (courier) {
+      items = [
+        { href: "espace-livreur.html", icon: "🛵", label: "Courses", match: ["espace-livreur.html"] },
+        { href: "suivi.html", icon: "📍", label: "Suivi", match: ["suivi.html"] },
+        { href: "espace-livreur.html", icon: "＋", label: "Activer", match: [], cta: true },
+        { href: "espace-livreur.html", icon: "👤", label: "Profil", match: ["espace-livreur.html"] },
+      ];
+    } else if (staff) {
+      // admin : pas de dock (déjà exclus) — fallback
+      return;
+    } else {
+      items = [
+        {
+          href: "index.html",
+          icon: "🏠",
+          label: "Accueil",
+          match: ["index.html", ""],
+        },
+        {
+          href: "suivi.html",
+          icon: "📍",
+          label: "Suivi",
+          match: ["suivi.html"],
+        },
+        {
+          href: user
+            ? "espace-client.html?commander=1"
+            : "login.html?next=" +
+              encodeURIComponent("espace-client.html?commander=1"),
+          icon: "＋",
+          label: "Envoyer",
+          match: ["espace-client.html"],
+          cta: true,
+        },
+        {
+          href: user ? "espace-client.html" : "login.html",
+          icon: "👤",
+          label: user ? "Compte" : "Connexion",
+          match: ["espace-client.html", "profil.html", "login.html"],
+        },
+      ];
+    }
+
+    const isActive = (match) => {
+      if (!match || !match.length) return "";
+      return match.some(
+        (n) => page === n || (n && page.startsWith(n.replace(".html", "")))
+      )
         ? " is-active"
         : "";
+    };
 
     const dock = document.createElement("nav");
     dock.id = "mobileDock";
     dock.className = "mobile-dock";
     dock.setAttribute("aria-label", "Navigation mobile");
-    // 4–5 items clairs (pas de double « Admin »)
-    const midHref = courier
-      ? "espace-livreur.html"
-      : staff
-        ? "admin.html"
-        : user
-          ? "espace-client.html?commander=1"
-          : orderHref;
-    const midLabel = courier ? "Courses" : staff ? "Admin" : "Envoyer";
-    const midIcon = courier ? "🛵" : staff ? "⚙️" : "＋";
-    const accountItemHref = courier
-      ? "espace-livreur.html"
-      : staff
-        ? "admin.html"
-        : user
-          ? "profil.html"
-          : "login.html";
-    const accountItemLabel = courier
-      ? "Profil"
-      : staff
-        ? "Panel"
-        : user
-          ? "Profil"
-          : "Compte";
-    const lastHref = courier
-      ? "suivi.html"
-      : staff
-        ? "suivi.html"
-        : "mes-colis.html";
-    const lastLabel = courier || staff ? "Carte" : "Colis";
-    const lastIcon = courier || staff ? "🗺️" : "📦";
-
-    dock.innerHTML = `
-      <div class="mobile-dock__inner">
-        <a class="mobile-dock__item${isActive(["index.html", ""])}" href="index.html">
-          <span class="mobile-dock__icon" aria-hidden="true">🏠</span>
-          Accueil
-        </a>
-        <a class="mobile-dock__item${isActive(["suivi.html", "fiche.html"])}" href="suivi.html">
-          <span class="mobile-dock__icon" aria-hidden="true">📍</span>
-          Suivi
-        </a>
-        <a class="mobile-dock__item mobile-dock__item--cta${isActive(["espace-client.html", "admin.html", "espace-livreur.html"])}" href="${midHref}">
-          <span class="mobile-dock__icon" aria-hidden="true">${midIcon}</span>
-          ${midLabel}
-        </a>
-        <a class="mobile-dock__item${isActive(["profil.html", "livreur.html", "espace-livreur.html", "login.html"])}" href="${accountItemHref}">
-          <span class="mobile-dock__icon" aria-hidden="true">👤</span>
-          ${accountItemLabel}
-        </a>
-        <a class="mobile-dock__item${isActive(["mes-colis.html", "suivi.html"])}" href="${lastHref}">
-          <span class="mobile-dock__icon" aria-hidden="true">${lastIcon}</span>
-          ${lastLabel}
-        </a>
-      </div>`;
+    dock.innerHTML = `<div class="mobile-dock__inner">${items
+      .map(
+        (it) => `
+      <a class="mobile-dock__item${it.cta ? " mobile-dock__item--cta" : ""}${isActive(
+        it.match
+      )}" href="${it.href}">
+        <span class="mobile-dock__icon" aria-hidden="true">${it.icon}</span>
+        <span class="mobile-dock__label">${it.label}</span>
+      </a>`
+      )
+      .join("")}</div>`;
     document.body.appendChild(dock);
     document.body.classList.add("has-mobile-dock");
   };

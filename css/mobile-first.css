@@ -96,73 +96,7 @@ a.btn,
   font-size: 1.05rem;
 }
 
-/* ===== Mobile dock (barre bas d’écran) ===== */
-.mobile-dock {
-  display: none;
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 300;
-  padding: 0.35rem 0.4rem calc(0.35rem + var(--safe-b));
-  background: rgba(255, 255, 255, 0.96);
-  border-top: 1px solid var(--gray-200);
-  box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.mobile-dock__inner {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.15rem;
-  max-width: 520px;
-  margin: 0 auto;
-}
-
-.mobile-dock__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.15rem;
-  min-height: 52px;
-  padding: 0.25rem 0.15rem;
-  border-radius: 12px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--gray-500);
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s;
-}
-
-.mobile-dock__item:active,
-.mobile-dock__item.is-active {
-  color: var(--blue-700);
-  background: var(--blue-50);
-}
-
-.mobile-dock__icon {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.mobile-dock__item--cta {
-  color: var(--blue-700);
-}
-
-.mobile-dock__item--cta .mobile-dock__icon {
-  width: 2.4rem;
-  height: 2.4rem;
-  display: grid;
-  place-items: center;
-  background: var(--blue-600);
-  color: #fff;
-  border-radius: 999px;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
-}
+/* Dock styles : voir style.css (source unique pour éviter les conflits) */
 
 /* ===== Mobile-first layout defaults (téléphone d’abord) ===== */
 @media (max-width: 900px) {
