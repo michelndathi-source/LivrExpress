@@ -1,38 +1,28 @@
-# LivrExpress — Livraison, clients & admin
+# LivrExpress
 
-Site HTML / CSS / JS avec **espace client**, **espace admin**, validation des commandes et suivi type transporteur.
+Site de livraison express à Dakar — suivi en direct du colis jusqu’à la réception.
+
+Site HTML / CSS / JS avec **espace client**, **espace admin**, **Supabase Auth**, validation des commandes, carte live, profils et livreurs.
 
 ## Rôles
 
 | Rôle | Accès |
 |------|--------|
 | **Visiteur** | Accueil, tarifs, suivi public par n° (si déjà validé) |
-| **Client** | Compte, demander une livraison, historique, suivi de ses colis validés |
-| **Admin** | Valider / refuser les demandes, gérer livraisons & clients |
+| **Client** | Compte, photo profil, demander une livraison, historique, suivi |
+| **Admin** | Valider / refuser les demandes, gérer livraisons, mapping clients |
+| **Super-admin** | + gestion des co-admins |
 
 ## Flux commande
 
 1. Le client crée un compte et se connecte  
 2. Il envoie une **demande** de livraison (pas de n° de suivi tout de suite)  
 3. L’**admin** valide → génération du n° `LX-…` + fiche + pipeline  
-4. Le client suit son colis dans **Mon espace** / page Suivi  
+4. Le client suit son colis (carte Maps + notifs + profil livreur)
 
-## Comptes & rôles admin
+## Comptes
 
-| Rôle | Droits |
-|------|--------|
-| **super_admin** | Propriétaire unique. Valide les demandes, gère livraisons, **ajoute / retire des co-admins** |
-| **admin** (co-admin) | Valide / refuse (unité ou masse), gère livraisons. **Ne peut pas** gérer l’équipe |
-| **client** | Demandes + suivi de ses colis |
-
-**Super-admin (propriétaire)**
-
-- Email : `michelndathi@gmail.com`  
-- Mot de passe : `admin123`  
-
-Modifiable dans `js/auth.js` → `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD`.
-
-Les co-admins s’ajoutent depuis **Admin → Équipe admin** (visible uniquement pour le super-admin).
+**Super-admin** : `michelndathi@gmail.com` (config Auth Supabase + `js/auth.js`)
 
 **Client** : inscription via `register.html`.
 
@@ -41,49 +31,41 @@ Les co-admins s’ajoutent depuis **Admin → Équipe admin** (visible uniquemen
 | Fichier | Rôle |
 |---------|------|
 | `index.html` | Landing publique |
-| `login.html` | Connexion |
-| `register.html` | Inscription client |
+| `login.html` / `register.html` | Connexion / inscription |
 | `espace-client.html` | Interface client |
+| `profil.html` | Fiche compte produit |
+| `livreur.html` | Profil livreur public |
 | `admin.html` | Administration |
-| `suivi.html` | Suivi live par n° |
+| `suivi.html` | Suivi live + carte |
 | `fiche.html` | Waybill / fiche produit |
 
 ## Structure JS
 
 ```text
 js/
-├── supabase-config.js  # URL + clé anon Supabase (à renseigner)
+├── supabase-config.js  # URL + clé publishable Supabase
 ├── supabase-client.js  # Auth + CRUD distant
-├── auth.js             # comptes, session, rôles (Supabase ou local)
-├── livraison.js        # demandes, colis, pipeline (+ sync cloud)
+├── auth.js             # comptes, session, rôles
+├── livraison.js        # demandes, colis, pipeline
+├── profile.js          # profils, mapping clients, livreurs
 ├── live-map.js         # carte de suivi live
 ├── push-notify.js      # notifications téléphone
 └── main.js             # UI pages
 ```
 
-Données : **Supabase** (Auth + Postgres) si configuré, sinon **localStorage** (démo hors-ligne).
+Données : **Supabase** (Auth + Postgres) si configuré, sinon **localStorage**.
 
-Guide complet : **[SUPABASE.md](./SUPABASE.md)**
+Guide : **[SUPABASE.md](./SUPABASE.md)**
 
 ## Lancer
 
-Ouvrir **`splash.html`** (entrée recommandée) ou n’importe quelle page :
-sans session, le site redirige vers le splash puis la connexion.
-
 ```bash
+# Depuis le dossier du projet
 python -m http.server 5500
 ```
 
-Puis `http://localhost:5500/splash.html`.
+Puis ouvrir `http://localhost:5500/splash.html` ou `login.html`.
 
-### Accès
+## GitHub
 
-1. Splash bleu 3 s (icône livraison + 0→100 %)  
-2. Connexion ou inscription obligatoire  
-3. Accès au site (accueil, commandes, suivi, admin)
-
-## Personnalisation
-
-- WhatsApp / téléphone : `js/livraison.js` (`WHATSAPP`)
-- Admin par défaut : `js/auth.js` (`DEFAULT_ADMIN`)
-- Tarifs : `PLAN_PRICES` dans `livraison.js` + section tarifs HTML
+Dépôt : https://github.com/michelndathi-source/livrexpress
