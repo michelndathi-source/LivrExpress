@@ -34,11 +34,57 @@
           <a href="index.html" class="nav__link">Site public</a>
           <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
         </nav>
-        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
-          <span></span><span></span><span></span>
-        </button>
+
+        <div class="header__end">
+          <div class="notif-wrap" id="notifWrap">
+            <button
+              type="button"
+              class="notif-bell"
+              id="notifBell"
+              aria-label="Notifications"
+              aria-expanded="false"
+              aria-controls="notifPanel"
+              title="Nouvelles commandes"
+            >
+              <span class="notif-bell__icon" aria-hidden="true">🔔</span>
+              <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
+            </button>
+          </div>
+          <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
       </div>
     </header>
+
+    <!-- Overlay + panneau notifications admin -->
+    <div class="notif-overlay" id="notifOverlay" hidden></div>
+    <div
+      class="notif-panel"
+      id="notifPanel"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="Notifications admin"
+    >
+      <header class="notif-panel__head">
+        <h2 class="notif-panel__title">Notifications</h2>
+        <div class="notif-panel__head-actions">
+          <button type="button" class="btn btn--ghost btn--sm" id="notifMarkAll">
+            Tout lu
+          </button>
+          <button type="button" class="notif-panel__close" id="notifClose" aria-label="Fermer">
+            ×
+          </button>
+        </div>
+      </header>
+      <div class="notif-panel__list" id="notifPanelList"></div>
+      <footer class="notif-panel__foot">
+        <p class="notif-panel__hint">Alertes automatiques : nouvelles commandes clients.</p>
+      </footer>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
     <main class="dash dash--admin" id="adminDash">
       <div class="container">
@@ -58,6 +104,32 @@
             <p class="dash-admin-role" id="adminRoleBadge">Admin</p>
           </div>
         </div>
+
+        <!-- Activation notifications téléphone admin -->
+        <aside class="push-banner" id="pushBanner" hidden>
+          <div class="push-banner__icon" aria-hidden="true">🔔</div>
+          <div class="push-banner__body">
+            <p class="push-banner__title" id="pushBannerTitle">
+              Activez les alertes nouvelles commandes
+            </p>
+            <p class="push-banner__text" id="pushBannerText">
+              Recevez une notification téléphone à chaque nouvelle demande client,
+              même si l’onglet admin n’est pas au premier plan.
+            </p>
+            <p class="push-banner__status" id="pushBannerStatus" hidden></p>
+            <div class="push-banner__actions">
+              <button type="button" class="btn btn--primary btn--sm" id="pushEnableBtn">
+                Activer les notifications
+              </button>
+              <button type="button" class="btn btn--outline btn--sm" id="pushTestBtn" hidden>
+                Tester
+              </button>
+              <button type="button" class="btn btn--ghost btn--sm" id="pushDismissBtn">
+                Plus tard
+              </button>
+            </div>
+          </div>
+        </aside>
 
         <div class="dash-stats">
           <div class="dash-stat dash-stat--warn">

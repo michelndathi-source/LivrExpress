@@ -2440,6 +2440,13 @@ body.notif-open {
   font-size: 0.9rem;
 }
 
+.notif-panel__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted, #64748b);
+  text-align: center;
+}
+
 .notif-panel__foot {
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--gray-100);

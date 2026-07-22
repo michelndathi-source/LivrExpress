@@ -231,8 +231,11 @@
               data.url ||
               (data.trackingId
                 ? `./suivi.html?id=${encodeURIComponent(data.trackingId)}`
-                : "./espace-client.html"),
+                : data.orderId
+                  ? "./admin.html"
+                  : "./espace-client.html"),
             trackingId: data.trackingId,
+            orderId: data.orderId,
             notificationId: data.id,
           },
         });
@@ -327,19 +330,45 @@
 
     const results = { system: null, bridge: null };
 
-    // Toujours tenter la notif système si permission déjà accordée
-    // (même depuis l’onglet admin sur le même appareil)
-    if (permission() === "granted") {
-      results.system = await showSystemNotification(payload);
+    // URL par défaut selon le type (admin = dashboard, client = suivi)
+    const enriched = {
+      ...payload,
+      url:
+        payload.url ||
+        (payload.type === "new_order" || payload.type === "admin_order"
+          ? "./admin.html"
+          : payload.trackingId
+            ? `./suivi.html?id=${encodeURIComponent(payload.trackingId)}`
+            : undefined),
+    };
+
+    // Afficher la bannière OS uniquement si CET appareil appartient au destinataire
+    // (évite d’alerter le client quand on notifie les admins, et inversement)
+    const prefs = readPrefs()[userId];
+    const deviceBoundToUser = Boolean(prefs && prefs.enabled);
+    let isLoggedAsTarget = false;
+    try {
+      const Auth = global.Auth || global.LivrExpressAuth;
+      const sessionUser = Auth?.getCurrentUser?.();
+      isLoggedAsTarget = Boolean(sessionUser && sessionUser.id === userId);
+    } catch (_) {
+      /* ignore */
     }
 
-    // Pont distant (site fermé sur le téléphone du client)
-    results.bridge = await sendPhoneBridge(userId, payload);
+    if (
+      permission() === "granted" &&
+      (deviceBoundToUser || isLoggedAsTarget)
+    ) {
+      results.system = await showSystemNotification(enriched);
+    }
+
+    // Pont distant (topic ntfy du destinataire — même site fermé)
+    results.bridge = await sendPhoneBridge(userId, enriched);
 
     try {
       global.dispatchEvent(
         new CustomEvent("livrexpress:device-notify", {
-          detail: { userId, payload, results },
+          detail: { userId, payload: enriched, results },
         })
       );
     } catch (_) {

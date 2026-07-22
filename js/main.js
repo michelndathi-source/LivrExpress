@@ -1837,28 +1837,49 @@
     document.getElementById("clientNotifList")?.addEventListener("click", onNotifClick);
 
     // Mise à jour live (autre onglet admin ou même page)
-    window.addEventListener("livrexpress:notifications", () => {
+    const onClientNotif = () => {
       refreshNotifUI();
       flashUnreadToasts();
-    });
+    };
+    window.addEventListener("livrexpress:notifications", onClientNotif);
     window.addEventListener("storage", (e) => {
       if (e.key === "livrexpress_notifications_v1") {
-        refreshNotifUI();
-        flashUnreadToasts();
+        onClientNotif();
       }
     });
-    // Poll léger si admin avance le statut dans un autre onglet (même navigateur)
+    // Poll auto : statut avancé ailleurs / sync Supabase
     let lastUnreadSnapshot = LX.countUnreadNotifications?.(user.id) ?? 0;
-    setInterval(() => {
+    setInterval(async () => {
+      if (typeof LX.listNotificationsAsync === "function") {
+        try {
+          await LX.listNotificationsAsync(user.id);
+        } catch (_) {
+          /* ignore */
+        }
+      }
       const unread = LX.countUnreadNotifications?.(user.id) ?? 0;
       if (unread !== lastUnreadSnapshot) {
         lastUnreadSnapshot = unread;
         refreshNotifUI();
         flashUnreadToasts();
+        // Rafraîchir le dashboard (statuts colis)
+        if (typeof refreshClientDash === "function") {
+          try {
+            await refreshClientDash();
+          } catch (_) {
+            /* ignore */
+          }
+        }
       } else {
         updateNotifBadges();
       }
-    }, 3000);
+    }, 2500);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        onClientNotif();
+      }
+    });
 
     const refreshClientDash = async () => {
       const orders = LX.listOrderRequestsAsync
@@ -2635,7 +2656,382 @@
       }
     });
 
+    // —— Notifications admin (nouvelles commandes) ——
+    const Push = window.LivrExpressPush;
+    const toastStack = document.getElementById("toastStack");
+    const notifBell = document.getElementById("notifBell");
+    const notifPanel = document.getElementById("notifPanel");
+    const notifOverlay = document.getElementById("notifOverlay");
+    const toastedIds = new Set();
+    const TOAST_SEEN_KEY = `livrexpress_toast_seen_${admin.id}`;
+    const PUSH_DISMISS_KEY = `livrexpress_push_dismiss_${admin.id}`;
+
+    try {
+      const seen = JSON.parse(sessionStorage.getItem(TOAST_SEEN_KEY) || "[]");
+      if (Array.isArray(seen)) seen.forEach((id) => toastedIds.add(id));
+    } catch (_) {
+      /* ignore */
+    }
+
+    const persistToasted = () => {
+      try {
+        sessionStorage.setItem(
+          TOAST_SEEN_KEY,
+          JSON.stringify([...toastedIds].slice(-100))
+        );
+      } catch (_) {
+        /* ignore */
+      }
+    };
+
+    const updateNotifBadges = () => {
+      const count =
+        typeof LX.countUnreadNotifications === "function"
+          ? LX.countUnreadNotifications(admin.id)
+          : 0;
+      const badge = document.getElementById("notifBadge");
+      if (badge) {
+        if (count > 0) {
+          badge.hidden = false;
+          badge.textContent = count > 99 ? "99+" : String(count);
+        } else {
+          badge.hidden = true;
+          badge.textContent = "0";
+        }
+      }
+      if (notifBell) {
+        notifBell.setAttribute(
+          "aria-label",
+          count > 0
+            ? `Notifications (${count} non lue${count > 1 ? "s" : ""})`
+            : "Notifications"
+        );
+      }
+      // Badge sur l’onglet Demandes si pending
+      document.title =
+        count > 0
+          ? `(${count}) Admin — LivrExpress`
+          : "Admin — LivrExpress";
+    };
+
+    const renderNotifItem = (n) => {
+      const when = LX.formatDateTime(n.createdAt);
+      return `
+        <article class="notif-item ${n.read ? "is-read" : "is-unread"}" data-notif-id="${n.id}" data-order-id="${n.orderId || ""}">
+          <span class="notif-item__icon" aria-hidden="true">${n.icon || "🧾"}</span>
+          <div class="notif-item__body">
+            <p class="notif-item__title">${n.title || "Notification"}</p>
+            <p class="notif-item__msg">${n.message || ""}</p>
+            <p class="notif-item__meta">${when}${n.orderId ? ` · ${n.orderId}` : ""}</p>
+          </div>
+          ${!n.read ? '<span class="notif-item__dot" aria-label="Non lue"></span>' : ""}
+        </article>`;
+    };
+
+    const refreshNotifUI = async () => {
+      if (typeof LX.listNotifications !== "function") return;
+      // Sync Supabase si dispo
+      if (typeof LX.listNotificationsAsync === "function") {
+        try {
+          await LX.listNotificationsAsync(admin.id);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      const all = LX.listNotifications(admin.id);
+      const recent = all.slice(0, 12);
+      const panelList = document.getElementById("notifPanelList");
+      if (panelList) {
+        if (!recent.length) {
+          panelList.innerHTML =
+            '<p class="notif-panel__empty">Aucune notification. Les nouvelles commandes apparaîtront ici automatiquement.</p>';
+        } else {
+          panelList.innerHTML = recent.map((n) => renderNotifItem(n)).join("");
+        }
+      }
+      updateNotifBadges();
+    };
+
+    const showToast = (n) => {
+      if (!toastStack || !n || toastedIds.has(n.id)) return;
+      toastedIds.add(n.id);
+      persistToasted();
+
+      const el = document.createElement("div");
+      el.className = "toast toast--status toast--admin";
+      el.setAttribute("role", "status");
+      el.innerHTML = `
+        <span class="toast__icon" aria-hidden="true">${n.icon || "🧾"}</span>
+        <div class="toast__body">
+          <p class="toast__title">${n.title || "Nouvelle commande"}</p>
+          <p class="toast__msg">${n.message || ""}</p>
+          ${
+            n.orderId
+              ? `<button type="button" class="toast__link" data-toast-orders>Voir les demandes</button>`
+              : ""
+          }
+        </div>
+        <button type="button" class="toast__close" aria-label="Fermer">×</button>`;
+
+      const remove = () => {
+        el.classList.add("is-leaving");
+        setTimeout(() => el.remove(), 280);
+      };
+      el.querySelector(".toast__close")?.addEventListener("click", remove);
+      el.querySelector("[data-toast-orders]")?.addEventListener("click", () => {
+        const tab = adminDash.querySelector('.dash-tab[data-tab="pending"]');
+        tab?.click();
+        remove();
+      });
+      toastStack.appendChild(el);
+      requestAnimationFrame(() => el.classList.add("is-in"));
+      setTimeout(remove, 8000);
+    };
+
+    const flashUnreadToasts = () => {
+      if (typeof LX.listNotifications !== "function") return;
+      const unread = LX.listNotifications(admin.id, {
+        unreadOnly: true,
+        limit: 5,
+      });
+      unread
+        .slice()
+        .reverse()
+        .forEach((n, i) => {
+          setTimeout(() => {
+            showToast(n);
+            if (
+              Push &&
+              Push.permission() === "granted" &&
+              !toastedIds.has("sys-" + n.id)
+            ) {
+              toastedIds.add("sys-" + n.id);
+              persistToasted();
+              Push.showSystemNotification({
+                id: n.id,
+                title: n.title,
+                message: n.message,
+                orderId: n.orderId,
+                type: n.type,
+                icon: n.icon,
+                url: "./admin.html",
+                renotify: true,
+                requireInteraction: n.type === "new_order",
+              });
+            }
+          }, i * 300);
+        });
+    };
+
+    const setNotifPanelOpen = (open) => {
+      if (!notifPanel || !notifBell) return;
+      if (open) {
+        notifPanel.hidden = false;
+        if (notifOverlay) {
+          notifOverlay.hidden = false;
+          requestAnimationFrame(() => notifOverlay.classList.add("is-open"));
+        }
+        requestAnimationFrame(() => notifPanel.classList.add("is-open"));
+        document.body.classList.add("notif-open");
+        const nav = document.getElementById("nav");
+        const toggle = document.getElementById("navToggle");
+        if (nav) nav.classList.remove("is-open");
+        if (toggle) {
+          toggle.setAttribute("aria-expanded", "false");
+        }
+        refreshNotifUI();
+      } else {
+        notifPanel.classList.remove("is-open");
+        if (notifOverlay) notifOverlay.classList.remove("is-open");
+        document.body.classList.remove("notif-open");
+        setTimeout(() => {
+          notifPanel.hidden = true;
+          if (notifOverlay) notifOverlay.hidden = true;
+        }, 200);
+      }
+      notifBell.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+
+    if (notifBell && notifPanel) {
+      notifBell.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = notifBell.getAttribute("aria-expanded") === "true";
+        setNotifPanelOpen(!isOpen);
+      });
+    }
+    notifOverlay?.addEventListener("click", () => setNotifPanelOpen(false));
+    document.getElementById("notifClose")?.addEventListener("click", () =>
+      setNotifPanelOpen(false)
+    );
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && notifBell?.getAttribute("aria-expanded") === "true") {
+        setNotifPanelOpen(false);
+      }
+    });
+    document.getElementById("notifMarkAll")?.addEventListener("click", () => {
+      LX.markAllNotificationsRead?.(admin.id);
+      refreshNotifUI();
+    });
+
+    document.getElementById("notifPanelList")?.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-notif-id]");
+      if (!item) return;
+      const id = item.getAttribute("data-notif-id");
+      LX.markNotificationRead?.(admin.id, id);
+      refreshNotifUI();
+      // Ouvrir l’onglet demandes
+      const tab = adminDash.querySelector('.dash-tab[data-tab="pending"]');
+      tab?.click();
+      setNotifPanelOpen(false);
+      refreshAdmin();
+    });
+
+    // Push banner admin
+    const pushBanner = document.getElementById("pushBanner");
+    const refreshPushBanner = () => {
+      if (!pushBanner || !Push) return;
+      const st = Push.getStatus(admin.id);
+      const dismissed = sessionStorage.getItem(PUSH_DISMISS_KEY) === "1";
+      const titleEl = document.getElementById("pushBannerTitle");
+      const textEl = document.getElementById("pushBannerText");
+      const enableBtn = document.getElementById("pushEnableBtn");
+      const testBtn = document.getElementById("pushTestBtn");
+      const dismissBtn = document.getElementById("pushDismissBtn");
+
+      pushBanner.hidden = false;
+      pushBanner.classList.remove("push-banner--ok", "push-banner--warn");
+
+      if (!st.supported) {
+        pushBanner.classList.add("push-banner--warn");
+        if (titleEl) titleEl.textContent = "Notifications non supportées";
+        if (enableBtn) enableBtn.hidden = true;
+        if (testBtn) testBtn.hidden = true;
+        return;
+      }
+      if (st.enabled && st.permission === "granted") {
+        pushBanner.classList.add("push-banner--ok");
+        if (titleEl) titleEl.textContent = "Alertes nouvelles commandes activées";
+        if (textEl) {
+          textEl.textContent =
+            "Vous serez alerté automatiquement à chaque demande client.";
+        }
+        if (enableBtn) enableBtn.hidden = true;
+        if (testBtn) testBtn.hidden = false;
+        if (dismissed) pushBanner.hidden = true;
+        return;
+      }
+      if (st.permission === "denied") {
+        pushBanner.classList.add("push-banner--warn");
+        if (titleEl) titleEl.textContent = "Notifications bloquées";
+        if (enableBtn) {
+          enableBtn.hidden = false;
+          enableBtn.textContent = "Réessayer";
+        }
+        return;
+      }
+      if (dismissed && st.permission === "default") {
+        pushBanner.hidden = true;
+        return;
+      }
+      if (enableBtn) {
+        enableBtn.hidden = false;
+        enableBtn.textContent = "Activer les notifications";
+      }
+      if (testBtn) testBtn.hidden = true;
+    };
+
+    document.getElementById("pushEnableBtn")?.addEventListener("click", async () => {
+      if (!Push) return;
+      const enableBtn = document.getElementById("pushEnableBtn");
+      if (enableBtn) {
+        enableBtn.disabled = true;
+        enableBtn.textContent = "Activation…";
+      }
+      const res = await Push.enablePhoneNotifications(admin.id);
+      if (enableBtn) enableBtn.disabled = false;
+      if (!res.ok) {
+        alert(res.error || "Impossible d’activer les notifications.");
+      } else {
+        sessionStorage.removeItem(PUSH_DISMISS_KEY);
+      }
+      refreshPushBanner();
+    });
+    document.getElementById("pushTestBtn")?.addEventListener("click", async () => {
+      if (!Push) return;
+      await Push.showSystemNotification({
+        id: "admin-test-" + Date.now(),
+        title: "Test admin LivrExpress",
+        message: "Les alertes nouvelles commandes fonctionnent.",
+        url: "./admin.html",
+        renotify: true,
+      });
+    });
+    document.getElementById("pushDismissBtn")?.addEventListener("click", () => {
+      sessionStorage.setItem(PUSH_DISMISS_KEY, "1");
+      if (pushBanner) pushBanner.hidden = true;
+    });
+    refreshPushBanner();
+
+    // Live : nouvelle commande / storage / même navigateur
+    const onAdminNotif = () => {
+      refreshNotifUI();
+      flashUnreadToasts();
+      refreshAdmin();
+    };
+    window.addEventListener("livrexpress:notifications", onAdminNotif);
+    window.addEventListener("livrexpress:new-order", onAdminNotif);
+    window.addEventListener("livrexpress:orders", () => refreshAdmin());
+    window.addEventListener("storage", (e) => {
+      if (
+        e.key === "livrexpress_notifications_v1" ||
+        e.key === "livrexpress_order_requests_v1"
+      ) {
+        onAdminNotif();
+      }
+    });
+
+    // Poll auto (autre appareil / autre onglet / Supabase)
+    let lastUnreadAdmin = LX.countUnreadNotifications?.(admin.id) ?? 0;
+    let lastPendingCount = -1;
+    setInterval(async () => {
+      if (typeof LX.listNotificationsAsync === "function") {
+        try {
+          await LX.listNotificationsAsync(admin.id);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      const unread = LX.countUnreadNotifications?.(admin.id) ?? 0;
+      if (unread !== lastUnreadAdmin) {
+        lastUnreadAdmin = unread;
+        refreshNotifUI();
+        flashUnreadToasts();
+      } else {
+        updateNotifBadges();
+      }
+      // Rafraîchir la liste des demandes si le compteur change
+      try {
+        const pending = (LX.listOrderRequests({ status: "pending" }) || []).length;
+        if (pending !== lastPendingCount) {
+          lastPendingCount = pending;
+          refreshAdmin();
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }, 2500);
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        refreshNotifUI();
+        flashUnreadToasts();
+        refreshAdmin();
+        refreshPushBanner();
+      }
+    });
+
     refreshAdmin();
+    refreshNotifUI().then(() => flashUnreadToasts());
   }
 
   // ===== Espace livreur =====

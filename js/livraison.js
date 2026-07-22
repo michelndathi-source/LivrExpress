@@ -447,13 +447,18 @@
         Promise.resolve(
           Push.notifyClientDevice(userId, {
             id: item.id,
+            type: item.type,
             title: item.title,
             message: item.message,
             trackingId: item.trackingId,
+            orderId: item.orderId,
             statusKey: item.statusKey,
             icon: item.icon,
+            url: payload.url || null,
             requireInteraction:
-              item.statusKey === "delivery" || item.statusKey === "delivered",
+              item.statusKey === "delivery" ||
+              item.statusKey === "delivered" ||
+              item.type === "new_order",
           })
         ).catch((err) => console.warn("LivrExpress push:", err));
       }
@@ -820,9 +825,98 @@
   const writeOrders = (map) => {
     try {
       localStorage.setItem(ORDERS_KEY, JSON.stringify(map));
+      try {
+        global.dispatchEvent(
+          new CustomEvent("livrexpress:orders", { detail: { map } })
+        );
+      } catch (_) {
+        /* ignore */
+      }
     } catch (e) {
       console.warn("LivrExpress: commandes non enregistrées", e);
     }
+  };
+
+  /**
+   * IDs des comptes admin (local + fallback super-admin).
+   * Utilisé pour pousser les alertes « nouvelle commande ».
+   */
+  const listAdminUserIds = () => {
+    const ids = new Set();
+    // Fallback propriétaire (auth.js DEFAULT_SUPER_ADMIN.id)
+    ids.add("super_admin_owner");
+    try {
+      const Auth = global.Auth || global.LivrExpressAuth;
+      if (Auth && typeof Auth.listAdmins === "function") {
+        Auth.listAdmins().forEach((a) => {
+          if (a && a.id) ids.add(a.id);
+        });
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      const raw = localStorage.getItem("livrexpress_users_v1");
+      if (raw) {
+        const users = JSON.parse(raw);
+        Object.values(users || {}).forEach((u) => {
+          if (
+            u &&
+            u.id &&
+            (u.role === "admin" || u.role === "super_admin")
+          ) {
+            ids.add(u.id);
+          }
+        });
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    return [...ids];
+  };
+
+  /** Notifie tous les admins (nouvelle commande, etc.) */
+  const notifyAdmins = (payload = {}) => {
+    const items = [];
+    listAdminUserIds().forEach((adminId) => {
+      const item = createNotification(adminId, {
+        type: payload.type || "admin_order",
+        icon: payload.icon || "🧾",
+        ...payload,
+      });
+      if (item) items.push(item);
+    });
+    return items;
+  };
+
+  /**
+   * Version async : notifie uniquement les admins distants absents de la liste locale
+   * (évite les doublons après un appel notifyAdmins sync).
+   */
+  const notifyAdminsAsync = async (payload = {}, alreadyNotifiedIds = []) => {
+    const known = new Set(alreadyNotifiedIds || listAdminUserIds());
+    const extra = new Set();
+    try {
+      const Auth = global.Auth || global.LivrExpressAuth;
+      if (Auth && typeof Auth.listAdminsAsync === "function") {
+        const remote = await Auth.listAdminsAsync();
+        (remote || []).forEach((a) => {
+          if (a && a.id && !known.has(a.id)) extra.add(a.id);
+        });
+      }
+    } catch (e) {
+      console.warn("notifyAdminsAsync list:", e);
+    }
+    const items = [];
+    extra.forEach((adminId) => {
+      const item = createNotification(adminId, {
+        type: payload.type || "admin_order",
+        icon: payload.icon || "🧾",
+        ...payload,
+      });
+      if (item) items.push(item);
+    });
+    return items;
   };
 
   const orderId = () =>
@@ -901,6 +995,43 @@
         console.warn("Sync order:", e)
       );
     }
+
+    // —— Notifications automatiques ——
+    // 1) Client : confirmation de réception de la demande
+    createNotification(user.id, {
+      type: "order_pending",
+      title: "Demande envoyée",
+      message: `Votre demande ${id} est en attente de validation LivrExpress. Vous serez notifié dès qu’elle sera traitée.`,
+      orderId: id,
+      icon: "⏳",
+    });
+
+    // 2) Admins : nouvelle commande à valider (immédiat + async Supabase)
+    const adminPayload = {
+      type: "new_order",
+      title: "Nouvelle commande",
+      message: `${request.userName || request.userEmail || "Client"} · ${request.plan} · ${request.sender?.address || "—"} → ${request.recipient?.address || "—"} (${id})`,
+      orderId: id,
+      icon: "🧾",
+      url: "admin.html",
+    };
+    const adminNotifs = notifyAdmins(adminPayload);
+    // Enrichit avec les IDs admin distants absents du local (sans bloquer)
+    notifyAdminsAsync(
+      adminPayload,
+      adminNotifs.map((n) => n.userId)
+    ).catch((e) => console.warn("notifyAdminsAsync:", e));
+
+    try {
+      global.dispatchEvent(
+        new CustomEvent("livrexpress:new-order", {
+          detail: { request },
+        })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+
     return request;
   };
 
@@ -1538,9 +1669,12 @@
     formatDateShort,
     seedDemosIfNeeded,
     PLAN_PRICES,
-    // Notifications client
+    // Notifications client + admin
     createNotification,
     notifyStatusChange,
+    notifyAdmins,
+    notifyAdminsAsync,
+    listAdminUserIds,
     listNotifications,
     countUnreadNotifications,
     markNotificationRead,
