@@ -28,6 +28,12 @@
   };
 
   const isAdminRole = (role) => role === "admin" || role === "super_admin";
+  const isCourierRole = (role) => role === "courier";
+  const homeForRole = (role) => {
+    if (isAdminRole(role)) return "admin.html";
+    if (isCourierRole(role)) return "espace-livreur.html";
+    return "espace-client.html";
+  };
 
   const hashPassword = (password) => {
     // Hash simple pour démo (ne pas utiliser en production)
@@ -150,6 +156,8 @@
       role: user.role,
       isSuperAdmin: user.role === "super_admin",
       isAdmin: isAdminRole(user.role),
+      isCourier: isCourierRole(user.role),
+      courierId: user.courierId || null,
       createdAt: user.createdAt || user.created_at,
       address: user.address || "",
       createdBy: user.createdBy || user.created_by || null,
@@ -305,7 +313,33 @@
   };
 
   const updateProfile = async (userId, patch) => {
-    // Champs étendus (photo, quartier, etc.) → module profil
+    const actor = getCurrentUser();
+    const target =
+      (useSupabase()
+        ? null
+        : Object.values(seedAdmin()).find((u) => u.id === userId)) || null;
+
+    // Sécurité : un livreur ne peut pas modifier ses infos personnelles
+    if (actor && actor.role === "courier" && actor.id === userId) {
+      return {
+        ok: false,
+        error:
+          "Pour la sécurité, les livreurs ne peuvent pas modifier leurs informations. Contactez l’administration LivrExpress.",
+      };
+    }
+    // Seul le staff peut modifier un compte livreur
+    if (
+      (target?.role === "courier" || patch.role === "courier") &&
+      actor &&
+      !isAdminRole(actor.role)
+    ) {
+      return {
+        ok: false,
+        error: "Seul un administrateur peut créer ou modifier un compte livreur.",
+      };
+    }
+
+    // Champs étendus (photo, quartier, etc.) → module profil (clients)
     const extKeys = [
       "photoUrl",
       "city",
@@ -322,7 +356,11 @@
     extKeys.forEach((k) => {
       if (patch[k] != null) extPatch[k] = patch[k];
     });
-    if (Object.keys(extPatch).length && global.LivrExpressProfile?.setExt) {
+    if (
+      Object.keys(extPatch).length &&
+      global.LivrExpressProfile?.setExt &&
+      !(actor?.role === "courier")
+    ) {
       global.LivrExpressProfile.setExt(userId, extPatch);
     }
 
@@ -331,10 +369,10 @@
         name: patch.name,
         phone: patch.phone,
         address: patch.address,
+        role: isAdminRole(actor?.role) ? patch.role : undefined,
       });
       if (!res.ok) return res;
-      // Re-merge ext after remote base update
-      if (Object.keys(extPatch).length) {
+      if (Object.keys(extPatch).length && actor?.role !== "courier") {
         global.LivrExpressProfile?.setExt?.(userId, extPatch);
       }
       const merged = {
@@ -347,9 +385,17 @@
     const users = seedAdmin();
     const user = Object.values(users).find((u) => u.id === userId);
     if (!user) return { ok: false, error: "Utilisateur introuvable." };
+    if (user.role === "courier" && actor && !isAdminRole(actor.role)) {
+      return {
+        ok: false,
+        error: "Seul un administrateur peut modifier un compte livreur.",
+      };
+    }
     if (patch.name) user.name = String(patch.name).trim();
     if (patch.phone != null) user.phone = String(patch.phone).trim();
     if (patch.address != null) user.address = String(patch.address).trim();
+    if (patch.courierId != null) user.courierId = patch.courierId;
+    if (patch.role && isAdminRole(actor?.role)) user.role = patch.role;
     users[user.email] = user;
     writeUsers(users);
     if (getSession()?.userId === userId) setSession(user);
@@ -360,6 +406,214 @@
         ...global.LivrExpressProfile?.getExt?.(userId),
       }),
     };
+  };
+
+  /**
+   * Admin uniquement : crée un compte Auth livreur + fiche courier.
+   * Le livreur ne pourra jamais modifier ses infos perso.
+   */
+  const createCourierAccount = async (
+    actor,
+    { name, email, phone, password, vehicle, plate, zone, bio, avatar }
+  ) => {
+    if (!actor || !isAdminRole(actor.role)) {
+      return {
+        ok: false,
+        error: "Seul un administrateur peut créer un compte livreur.",
+      };
+    }
+    const key = String(email || "")
+      .trim()
+      .toLowerCase();
+    if (!key.includes("@")) return { ok: false, error: "Email invalide." };
+    if (!name || String(name).trim().length < 2) {
+      return { ok: false, error: "Nom du livreur requis." };
+    }
+    if (!password || String(password).length < 6) {
+      return { ok: false, error: "Mot de passe : 6 caractères minimum." };
+    }
+
+    const courierId =
+      "cr_" +
+      Date.now().toString(36) +
+      Math.random().toString(36).slice(2, 6);
+
+    let userId = null;
+    let userEmail = key;
+
+    if (useSupabase()) {
+      const sb = global.LivrExpressSB.getClient();
+      const { data: cur } = await sb.auth.getSession();
+      const adminSession = cur?.session;
+
+      const { data, error } = await sb.auth.signUp({
+        email: key,
+        password,
+        options: {
+          data: { name: String(name).trim(), phone: String(phone || "").trim() },
+        },
+      });
+      if (error) return { ok: false, error: error.message };
+      if (!data.user) {
+        return {
+          ok: false,
+          error: "Compte non créé (confirmation email ?). Désactivez Confirm email pour les tests.",
+        };
+      }
+      userId = data.user.id;
+      await sb
+        .from("profiles")
+        .update({
+          role: "courier",
+          name: String(name).trim(),
+          phone: String(phone || "").trim(),
+        })
+        .eq("id", userId);
+
+      // Restaurer session admin
+      if (adminSession?.refresh_token) {
+        await sb.auth.setSession({
+          access_token: adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+        await global.LivrExpressSB.fetchProfile(actor.id);
+      }
+    } else {
+      const users = seedAdmin();
+      if (users[key]) {
+        return { ok: false, error: "Un compte existe déjà avec cet email." };
+      }
+      userId = uid("cr");
+      users[key] = {
+        id: userId,
+        email: key,
+        passwordHash: hashPassword(password),
+        name: String(name).trim(),
+        phone: String(phone || "").trim(),
+        address: "",
+        role: "courier",
+        courierId,
+        createdAt: new Date().toISOString(),
+        createdBy: actor.email,
+      };
+      writeUsers(users);
+    }
+
+    const courier = {
+      id: courierId,
+      userId,
+      email: userEmail,
+      name: String(name).trim(),
+      phone: String(phone || "").trim(),
+      photoUrl: "",
+      avatar: avatar || "🛵",
+      vehicle: vehicle || "Moto",
+      plate: plate || "",
+      zone: zone || "Dakar",
+      rating: 5.0,
+      deliveriesCount: 0,
+      bio: bio || "",
+      languages: ["Français", "Wolof"],
+      verified: true,
+      active: true,
+      joinedAt: new Date().toISOString(),
+      createdBy: actor.email,
+    };
+
+    global.LivrExpressProfile?.saveCourier?.(courier);
+
+    // Sync Supabase couriers table
+    if (useSupabase()) {
+      const sb = global.LivrExpressSB.getClient();
+      await sb.from("couriers").upsert({
+        id: courier.id,
+        user_id: userId,
+        email: userEmail,
+        name: courier.name,
+        phone: courier.phone,
+        photo_url: "",
+        avatar: courier.avatar,
+        vehicle: courier.vehicle,
+        plate: courier.plate,
+        zone: courier.zone,
+        rating: courier.rating,
+        deliveries_count: 0,
+        bio: courier.bio,
+        languages: courier.languages,
+        verified: true,
+        active: true,
+        joined_at: courier.joinedAt,
+        created_by: actor.email,
+      });
+    }
+
+    return {
+      ok: true,
+      user: publicUser({
+        id: userId,
+        email: userEmail,
+        name: courier.name,
+        phone: courier.phone,
+        role: "courier",
+        courierId,
+      }),
+      courier,
+    };
+  };
+
+  /** Admin : met à jour la fiche livreur (infos perso verrouillées pour le livreur) */
+  const updateCourierAccount = async (actor, courierId, patch) => {
+    if (!actor || !isAdminRole(actor.role)) {
+      return {
+        ok: false,
+        error: "Seul un administrateur peut modifier un livreur.",
+      };
+    }
+    const Prof = global.LivrExpressProfile;
+    const prev = Prof?.getCourier?.(courierId);
+    if (!prev) return { ok: false, error: "Livreur introuvable." };
+
+    const next = Prof.saveCourier({
+      ...prev,
+      name: patch.name != null ? String(patch.name).trim() : prev.name,
+      phone: patch.phone != null ? String(patch.phone).trim() : prev.phone,
+      vehicle: patch.vehicle != null ? patch.vehicle : prev.vehicle,
+      plate: patch.plate != null ? patch.plate : prev.plate,
+      zone: patch.zone != null ? patch.zone : prev.zone,
+      bio: patch.bio != null ? patch.bio : prev.bio,
+      avatar: patch.avatar != null ? patch.avatar : prev.avatar,
+      active: patch.active != null ? Boolean(patch.active) : prev.active,
+      photoUrl: patch.photoUrl != null ? patch.photoUrl : prev.photoUrl,
+      verified: true,
+    });
+
+    // Sync user auth name/phone
+    if (prev.userId) {
+      await updateProfile(prev.userId, {
+        name: next.name,
+        phone: next.phone,
+      });
+    }
+
+    if (useSupabase()) {
+      const sb = global.LivrExpressSB.getClient();
+      await sb
+        .from("couriers")
+        .update({
+          name: next.name,
+          phone: next.phone,
+          vehicle: next.vehicle,
+          plate: next.plate,
+          zone: next.zone,
+          bio: next.bio,
+          avatar: next.avatar,
+          active: next.active,
+          photo_url: next.photoUrl || "",
+        })
+        .eq("id", courierId);
+    }
+
+    return { ok: true, courier: next };
   };
 
   /** Récupère un utilisateur par id (local ou cache) */
@@ -533,11 +787,11 @@
           ? isAdminRole(user.role)
           : role === "super_admin"
             ? user.role === "super_admin"
-            : user.role === role;
+            : role === "courier"
+              ? isCourierRole(user.role)
+              : user.role === role;
       if (!ok) {
-        window.location.href = isAdminRole(user.role)
-          ? "admin.html"
-          : "espace-client.html";
+        window.location.href = homeForRole(user.role);
         return null;
       }
     }
@@ -574,15 +828,46 @@
     }
 
     if (file === "login.html" || file === "register.html") {
-      window.location.replace(
-        isAdminRole(user.role) ? "admin.html" : "index.html"
-      );
+      window.location.replace(homeForRole(user.role));
       return { allowed: false, user };
     }
 
     // admin.html réservé aux admins
     if (file === "admin.html" && !isAdminRole(user.role)) {
-      window.location.replace("espace-client.html");
+      window.location.replace(homeForRole(user.role));
+      return { allowed: false, user };
+    }
+
+    // Espace livreur réservé aux livreurs
+    if (file === "espace-livreur.html" && !isCourierRole(user.role)) {
+      window.location.replace(homeForRole(user.role));
+      return { allowed: false, user };
+    }
+
+    // Livreurs : pages autorisées uniquement
+    if (isCourierRole(user.role)) {
+      const courierAllowed = [
+        "espace-livreur.html",
+        "livreur.html",
+        "suivi.html",
+        "fiche.html",
+        "index.html",
+        "splash.html",
+      ];
+      if (!courierAllowed.includes(file)) {
+        window.location.replace("espace-livreur.html");
+        return { allowed: false, user };
+      }
+      // espace-client / profil client interdits
+      if (file === "espace-client.html" || file === "profil.html") {
+        window.location.replace("espace-livreur.html");
+        return { allowed: false, user };
+      }
+    }
+
+    // Clients / staff ne passent pas par l'espace livreur
+    if (file === "espace-client.html" && isCourierRole(user.role)) {
+      window.location.replace("espace-livreur.html");
       return { allowed: false, user };
     }
 
@@ -693,6 +978,7 @@
   const isAdmin = () => isAdminRole(getCurrentUser()?.role);
   const isSuperAdmin = () => getCurrentUser()?.role === "super_admin";
   const isClient = () => getCurrentUser()?.role === "client";
+  const isCourier = () => isCourierRole(getCurrentUser()?.role);
 
   // Init seed
   seedAdmin();
@@ -714,6 +1000,8 @@
     listAdminsAsync,
     createAdmin,
     removeAdmin,
+    createCourierAccount,
+    updateCourierAccount,
     requireAuth,
     guardSite,
     runSplash,
@@ -721,7 +1009,10 @@
     isAdmin,
     isSuperAdmin,
     isClient,
+    isCourier,
     isAdminRole,
+    isCourierRole,
+    homeForRole,
     useSupabase,
     publicUser,
     PUBLIC_PAGES,

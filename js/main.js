@@ -10,6 +10,10 @@
     (user.role === "admin" ||
       user.role === "super_admin" ||
       (Auth && Auth.isAdminRole && Auth.isAdminRole(user.role)));
+  const isCourier = (user) =>
+    user &&
+    (user.role === "courier" ||
+      (Auth && Auth.isCourierRole && Auth.isCourierRole(user.role)));
 
   // ——— Session Supabase (si configuré) puis garde d'accès ———
   if (Auth && typeof Auth.bootstrap === "function") {
@@ -37,16 +41,27 @@
 
     const user = Auth ? Auth.getCurrentUser() : null;
     const staff = isStaff(user);
+    const courier = isCourier(user);
     const accountHref = staff
       ? "admin.html"
-      : user
-        ? "espace-client.html"
-        : "login.html";
-    const accountLabel = staff ? "Admin" : user ? "Compte" : "Connexion";
+      : courier
+        ? "espace-livreur.html"
+        : user
+          ? "espace-client.html"
+          : "login.html";
+    const accountLabel = staff
+      ? "Admin"
+      : courier
+        ? "Livreur"
+        : user
+          ? "Compte"
+          : "Connexion";
     const orderHref = user
       ? staff
         ? "admin.html"
-        : "espace-client.html?commander=1"
+        : courier
+          ? "espace-livreur.html"
+          : "espace-client.html?commander=1"
       : "login.html?next=" + encodeURIComponent("espace-client.html?commander=1");
 
     const isActive = (names) =>
@@ -72,17 +87,23 @@
           <span class="mobile-dock__icon" aria-hidden="true">＋</span>
           Envoyer
         </a>
-        <a class="mobile-dock__item${isActive(["profil.html", "livreur.html"])}" href="${
-          user && !staff ? "profil.html" : accountHref
+        <a class="mobile-dock__item${isActive(["profil.html", "livreur.html", "espace-livreur.html"])}" href="${
+          courier
+            ? "espace-livreur.html"
+            : user && !staff
+              ? "profil.html"
+              : accountHref
         }">
           <span class="mobile-dock__icon" aria-hidden="true">👤</span>
-          ${user && !staff ? "Profil" : accountLabel}
+          ${courier ? "Profil" : user && !staff ? "Profil" : accountLabel}
         </a>
-        <a class="mobile-dock__item${isActive(["admin.html", "mes-colis.html"])}" href="${
-          staff ? "admin.html" : "mes-colis.html"
+        <a class="mobile-dock__item${isActive(["admin.html", "mes-colis.html", "espace-livreur.html"])}" href="${
+          staff ? "admin.html" : courier ? "espace-livreur.html" : "mes-colis.html"
         }">
-          <span class="mobile-dock__icon" aria-hidden="true">${staff ? "⚙️" : "📦"}</span>
-          ${staff ? "Admin" : "Colis"}
+          <span class="mobile-dock__icon" aria-hidden="true">${
+            staff ? "⚙️" : courier ? "🛵" : "📦"
+          }</span>
+          ${staff ? "Admin" : courier ? "Courses" : "Colis"}
         </a>
       </div>`;
     document.body.appendChild(dock);
@@ -1249,14 +1270,17 @@
             next && !next.includes("login") && next.includes("admin")
               ? next
               : "admin.html";
+        } else if (isCourier(result.user)) {
+          window.location.href = "espace-livreur.html";
         } else {
           const safeNext =
             next &&
             !next.includes("login") &&
             !next.includes("register") &&
-            !next.includes("admin")
+            !next.includes("admin") &&
+            !next.includes("espace-livreur")
               ? next
-              : "index.html";
+              : "espace-client.html";
           window.location.href = safeNext;
         }
       } finally {
@@ -2232,27 +2256,38 @@
       const couriersList = document.getElementById("adminCouriersList");
       if (couriersList && Prof) {
         const crs = Prof.listCouriers(false);
-        couriersList.innerHTML = crs
-          .map(
-            (cr) => `
+        if (!crs.length) {
+          couriersList.innerHTML =
+            '<p class="dash-empty">Aucun livreur. Créez un compte ci-dessus.</p>';
+        } else {
+          couriersList.innerHTML = crs
+            .map(
+              (cr) => `
           <article class="dash-card">
             <div class="dash-card__top">
               <div>
                 <p class="dash-card__id">${cr.avatar || "🛵"} ${cr.name}</p>
-                <p class="dash-card__meta">${cr.vehicle} · ${cr.plate || "—"} · ★ ${cr.rating}</p>
+                <p class="dash-card__meta">${cr.email || "—"} · ${cr.phone || "—"}</p>
               </div>
-              <span class="badge-status ${cr.verified ? "badge-status--ok" : ""}">${
-                cr.verified ? "Vérifié" : "—"
+              <span class="badge-status ${cr.active !== false ? "badge-status--ok" : "badge-status--bad"}">${
+                cr.active !== false ? "Actif" : "Inactif"
               }</span>
             </div>
-            <p class="dash-card__route">${cr.zone}</p>
-            <p class="dash-card__meta">${cr.deliveriesCount} courses · ${cr.phone}</p>
+            <p class="dash-card__route">${cr.vehicle || "—"} · ${cr.plate || "—"} · ${cr.zone || "—"}</p>
+            <p class="dash-card__meta">★ ${cr.rating ?? "—"} · ${cr.deliveriesCount || 0} courses · Auth: ${
+                cr.userId ? "oui" : "fiche seule"
+              }</p>
             <div class="dash-card__actions">
               <a class="btn btn--outline btn--sm" href="livreur.html?id=${encodeURIComponent(cr.id)}">Profil public</a>
+              <button type="button" class="btn btn--ghost btn--sm" data-edit-courier="${cr.id}">Modifier (admin)</button>
+              <button type="button" class="btn btn--outline btn--sm" data-toggle-courier="${cr.id}">${
+                cr.active !== false ? "Désactiver" : "Activer"
+              }</button>
             </div>
           </article>`
-          )
-          .join("");
+            )
+            .join("");
+        }
       }
 
       // Équipe admin (super-admin)
@@ -2477,7 +2512,404 @@
       }
     );
 
+    // Création compte livreur (admin only)
+    const addCourierForm = document.getElementById("addCourierForm");
+    if (addCourierForm) {
+      addCourierForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const err = document.getElementById("crFormError");
+        const ok = document.getElementById("crFormSuccess");
+        const res = await Auth.createCourierAccount(admin, {
+          name: document.getElementById("crName").value,
+          email: document.getElementById("crEmail").value,
+          phone: document.getElementById("crPhone").value,
+          password: document.getElementById("crPassword").value,
+          vehicle: document.getElementById("crVehicle").value,
+          plate: document.getElementById("crPlate").value,
+          zone: document.getElementById("crZone").value,
+          bio: document.getElementById("crBio").value,
+        });
+        if (!res.ok) {
+          if (err) {
+            err.hidden = false;
+            err.textContent = res.error;
+          }
+          if (ok) ok.hidden = true;
+          return;
+        }
+        if (err) err.hidden = true;
+        if (ok) {
+          ok.hidden = false;
+          ok.textContent = `Livreur créé. Connexion : ${res.user.email} → espace-livreur.html`;
+        }
+        addCourierForm.reset();
+        refreshAdmin();
+      });
+    }
+
+    // Edit / toggle courier
+    adminDash.addEventListener("click", async (e) => {
+      const editBtn = e.target.closest("[data-edit-courier]");
+      const toggleBtn = e.target.closest("[data-toggle-courier]");
+      const Prof = window.LivrExpressProfile;
+      if (editBtn && Prof) {
+        const id = editBtn.getAttribute("data-edit-courier");
+        const cr = Prof.getCourier(id);
+        if (!cr) return;
+        const name = prompt("Nom du livreur :", cr.name);
+        if (name === null) return;
+        const phone = prompt("Téléphone service :", cr.phone || "");
+        if (phone === null) return;
+        const vehicle = prompt("Véhicule :", cr.vehicle || "Moto");
+        if (vehicle === null) return;
+        const plate = prompt("Immatriculation :", cr.plate || "");
+        if (plate === null) return;
+        const zone = prompt("Zone :", cr.zone || "");
+        if (zone === null) return;
+        const bio = prompt("Bio :", cr.bio || "");
+        if (bio === null) return;
+        const res = await Auth.updateCourierAccount(admin, id, {
+          name,
+          phone,
+          vehicle,
+          plate,
+          zone,
+          bio,
+        });
+        if (!res.ok) alert(res.error);
+        else refreshAdmin();
+      }
+      if (toggleBtn && Prof) {
+        const id = toggleBtn.getAttribute("data-toggle-courier");
+        const cr = Prof.getCourier(id);
+        if (!cr) return;
+        await Auth.updateCourierAccount(admin, id, {
+          active: cr.active === false,
+        });
+        refreshAdmin();
+      }
+    });
+
     refreshAdmin();
+  }
+
+  // ===== Espace livreur =====
+  const courierDash = document.getElementById("courierDash");
+  if (courierDash && Auth && LX) {
+    const user = Auth.requireAuth({ role: "courier" });
+    if (!user) return;
+
+    const Prof = window.LivrExpressProfile;
+    const Geo = window.LivrExpressGeo;
+    let courierProfile = Prof?.getCourierByUserId?.(user.id) || null;
+    // Lier userId si fiche trouvée par email
+    if (!courierProfile && Prof) {
+      courierProfile =
+        Prof.listCouriers(false).find(
+          (c) =>
+            c.email &&
+            c.email.toLowerCase() === (user.email || "").toLowerCase()
+        ) || null;
+      if (courierProfile && !courierProfile.userId) {
+        courierProfile = Prof.saveCourier({
+          ...courierProfile,
+          userId: user.id,
+          email: user.email,
+        });
+      }
+    }
+
+    const hello = document.getElementById("courierHello");
+    if (hello) {
+      hello.textContent = (courierProfile?.name || user.name || "Livreur")
+        .split(" ")[0];
+    }
+
+    let activeTrackingId = null;
+
+    const setTxt = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = v;
+    };
+
+    const refreshCourierDash = () => {
+      const available = LX.listAvailableForCourier
+        ? LX.listAvailableForCourier()
+        : [];
+      const active = LX.listActiveForCourier
+        ? LX.listActiveForCourier(user.id)
+        : [];
+      const history = LX.listHistoryForCourier
+        ? LX.listHistoryForCourier(user.id)
+        : [];
+
+      // Ne montrer en dispo que les non déjà pris par soi (ou vraiment libres)
+      const availFiltered = available.filter(
+        (s) =>
+          !s.assignedCourierUserId || s.assignedCourierUserId === user.id
+      );
+
+      setTxt("crStatAvail", String(availFiltered.filter((s) => !s.assignedCourierUserId).length));
+      setTxt("crStatActive", String(active.length));
+      setTxt("crStatDone", String(history.length));
+      setTxt(
+        "crStatRating",
+        courierProfile?.rating != null ? String(courierProfile.rating) : "—"
+      );
+
+      // Profil lecture seule
+      setTxt("crProfName", courierProfile?.name || user.name || "—");
+      setTxt("crProfEmail", courierProfile?.email || user.email || "—");
+      setTxt("crProfPhone", courierProfile?.phone || user.phone || "—");
+      setTxt("crProfVehicle", courierProfile?.vehicle || "—");
+      setTxt("crProfPlate", courierProfile?.plate || "—");
+      setTxt("crProfZone", courierProfile?.zone || "—");
+      setTxt(
+        "crProfRating",
+        courierProfile?.rating != null ? `★ ${courierProfile.rating}` : "—"
+      );
+      setTxt(
+        "crProfCount",
+        String(courierProfile?.deliveriesCount ?? history.length)
+      );
+      setTxt("crProfBio", courierProfile?.bio || "—");
+      const pub = document.getElementById("crPublicLink");
+      if (pub && courierProfile?.id) {
+        pub.href = `livreur.html?id=${encodeURIComponent(courierProfile.id)}`;
+      }
+
+      const availList = document.getElementById("courierAvailableList");
+      if (availList) {
+        const free = availFiltered.filter((s) => !s.assignedCourierUserId);
+        if (!free.length) {
+          availList.innerHTML =
+            '<p class="dash-empty">Aucune commande disponible pour le moment.</p>';
+        } else {
+          availList.innerHTML = free
+            .map((s) => {
+              const vm = LX.viewModel(s);
+              return `
+              <article class="dash-card">
+                <div class="dash-card__top">
+                  <div>
+                    <p class="dash-card__id">${s.trackingId}</p>
+                    <p class="dash-card__meta">${s.plan} · ${vm.badge}</p>
+                  </div>
+                  <span class="track__status ${vm.statusClass || ""}">${vm.badge}</span>
+                </div>
+                <p class="dash-card__route">
+                  <strong>De</strong> ${s.sender?.address || "—"}<br/>
+                  <strong>Vers</strong> ${s.recipient?.address || "—"}<br/>
+                  <strong>Dest.</strong> ${s.recipient?.name || "—"} · ${s.recipient?.phone || "—"}
+                </p>
+                <div class="dash-card__actions">
+                  <button type="button" class="btn btn--primary btn--sm" data-claim="${s.trackingId}">
+                    Activer la course
+                  </button>
+                  <a class="btn btn--outline btn--sm" href="suivi.html?id=${encodeURIComponent(s.trackingId)}">Carte</a>
+                </div>
+              </article>`;
+            })
+            .join("");
+        }
+      }
+
+      const activeList = document.getElementById("courierActiveList");
+      const mapPanel = document.getElementById("courierMapPanel");
+      if (activeList) {
+        if (!active.length) {
+          activeList.innerHTML =
+            '<p class="dash-empty">Aucune course active. Activez une commande dans l’onglet « Commandes dispo ».</p>';
+          if (mapPanel) mapPanel.hidden = true;
+          activeTrackingId = null;
+        } else {
+          activeList.innerHTML = active
+            .map((s) => {
+              const vm = LX.viewModel(s);
+              return `
+              <article class="dash-card">
+                <div class="dash-card__top">
+                  <div>
+                    <p class="dash-card__id">${s.trackingId}</p>
+                    <p class="dash-card__meta">${vm.badge} · ${s.recipient?.name || ""}</p>
+                  </div>
+                </div>
+                <p class="dash-card__route">${s.sender?.address} → ${s.recipient?.address}</p>
+                <div class="dash-card__actions">
+                  <button type="button" class="btn btn--primary btn--sm" data-focus-map="${s.trackingId}">Voir sur la carte</button>
+                  <button type="button" class="btn btn--outline btn--sm" data-advance-mine="${s.trackingId}">Avancer l’étape</button>
+                  <button type="button" class="btn btn--primary btn--sm" data-complete="${s.trackingId}">Marquer livré</button>
+                </div>
+              </article>`;
+            })
+            .join("");
+          if (!activeTrackingId) activeTrackingId = active[0].trackingId;
+          if (mapPanel) mapPanel.hidden = false;
+          mountCourierMap(activeTrackingId);
+        }
+      }
+
+      const histList = document.getElementById("courierHistoryList");
+      if (histList) {
+        if (!history.length) {
+          histList.innerHTML =
+            '<p class="dash-empty">Aucune livraison terminée pour l’instant.</p>';
+        } else {
+          histList.innerHTML = history
+            .map((s) => {
+              const vm = LX.viewModel(s);
+              return `
+              <article class="dash-card">
+                <div class="dash-card__top">
+                  <div>
+                    <p class="dash-card__id">${s.trackingId}</p>
+                    <p class="dash-card__meta">${LX.formatDateTime(s.deliveredAt || s.updatedAt)}</p>
+                  </div>
+                  <span class="badge-status badge-status--ok">${vm.badge}</span>
+                </div>
+                <p class="dash-card__route">${s.sender?.address} → ${s.recipient?.address}</p>
+                <div class="dash-card__actions">
+                  <a class="btn btn--outline btn--sm" href="suivi.html?id=${encodeURIComponent(s.trackingId)}">Carte / suivi</a>
+                  <a class="btn btn--ghost btn--sm" href="fiche.html?id=${encodeURIComponent(s.trackingId)}">Fiche PDF</a>
+                </div>
+              </article>`;
+            })
+            .join("");
+        }
+      }
+    };
+
+    const mountCourierMap = async (tid) => {
+      if (!tid || !window.LivrExpressMap) return;
+      const ship = LX.getShipment(tid);
+      if (!ship) return;
+      activeTrackingId = tid;
+      const panel = document.getElementById("courierMapPanel");
+      if (panel) panel.hidden = false;
+      try {
+        await window.LivrExpressMap.mountTrackingMap(ship, "courierLiveMap");
+      } catch (e) {
+        console.warn(e);
+      }
+      const markBtn = document.getElementById("crMarkDelivered");
+      if (markBtn) {
+        markBtn.hidden = ship.statusKey === "delivered";
+        markBtn.onclick = () => {
+          const res = LX.completeDeliveryByCourier(tid, user);
+          if (!res.ok) alert(res.error);
+          else {
+            Geo?.stopCourierTracking?.(tid);
+            refreshCourierDash();
+          }
+        };
+      }
+    };
+
+    // Tabs
+    courierDash.querySelectorAll(".dash-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const key = tab.getAttribute("data-tab");
+        courierDash.querySelectorAll(".dash-tab").forEach((t) =>
+          t.classList.remove("is-active")
+        );
+        tab.classList.add("is-active");
+        courierDash.querySelectorAll(".dash-panel").forEach((p) => {
+          const show = p.getAttribute("data-panel") === key;
+          p.hidden = !show;
+          p.classList.toggle("is-active", show);
+        });
+      });
+    });
+
+    courierDash.addEventListener("click", (e) => {
+      const claim = e.target.closest("[data-claim]");
+      const focus = e.target.closest("[data-focus-map]");
+      const complete = e.target.closest("[data-complete]");
+      const adv = e.target.closest("[data-advance-mine]");
+
+      if (claim) {
+        const tid = claim.getAttribute("data-claim");
+        const res = LX.claimShipment(tid, user, courierProfile);
+        if (!res.ok) {
+          alert(res.error);
+          return;
+        }
+        // Démarrer GPS
+        if (Geo?.startCourierTracking) {
+          Geo.startCourierTracking(tid, (pos) => {
+            const st = document.getElementById("crGpsStatus");
+            if (st && pos) {
+              st.hidden = false;
+              st.textContent = `GPS actif · ±${Math.round(pos.accuracy || 0)} m`;
+            }
+          });
+        }
+        activeTrackingId = tid;
+        refreshCourierDash();
+        // basculer onglet active
+        courierDash.querySelector('.dash-tab[data-tab="active"]')?.click();
+        return;
+      }
+      if (focus) {
+        mountCourierMap(focus.getAttribute("data-focus-map"));
+        courierDash.querySelector('.dash-tab[data-tab="active"]')?.click();
+        return;
+      }
+      if (complete) {
+        const tid = complete.getAttribute("data-complete");
+        const res = LX.completeDeliveryByCourier(tid, user);
+        if (!res.ok) alert(res.error);
+        else {
+          Geo?.stopCourierTracking?.(tid);
+          refreshCourierDash();
+        }
+        return;
+      }
+      if (adv) {
+        const tid = adv.getAttribute("data-advance-mine");
+        const ship = LX.getShipment(tid);
+        if (ship?.assignedCourierUserId !== user.id) {
+          alert("Course non assignée à vous.");
+          return;
+        }
+        LX.advanceShipment(tid);
+        refreshCourierDash();
+      }
+    });
+
+    // GPS controls
+    document.getElementById("crGpsStart")?.addEventListener("click", () => {
+      if (!activeTrackingId) {
+        alert("Aucune course active.");
+        return;
+      }
+      const res = Geo?.startCourierTracking?.(activeTrackingId, (pos) => {
+        const st = document.getElementById("crGpsStatus");
+        if (st && pos) {
+          st.hidden = false;
+          st.textContent = `GPS téléphone service · ±${Math.round(pos.accuracy || 0)} m · ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
+        }
+        window.LivrExpressMap?.getTracker?.()?.refresh(
+          LX.getShipment(activeTrackingId)
+        );
+      });
+      if (res && !res.ok) alert(res.error);
+      document.getElementById("crGpsStart").hidden = true;
+      document.getElementById("crGpsStop").hidden = false;
+    });
+    document.getElementById("crGpsStop")?.addEventListener("click", () => {
+      if (activeTrackingId) Geo?.stopCourierTracking?.(activeTrackingId);
+      document.getElementById("crGpsStart").hidden = false;
+      document.getElementById("crGpsStop").hidden = true;
+      const st = document.getElementById("crGpsStatus");
+      if (st) {
+        st.hidden = false;
+        st.textContent = "GPS arrêté.";
+      }
+    });
+
+    refreshCourierDash();
+    setInterval(refreshCourierDash, 8000);
   }
 
   // ===== Fiche compte produit (profil.html) =====

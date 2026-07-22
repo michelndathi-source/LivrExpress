@@ -222,7 +222,10 @@
     if (patch.address != null) payload.address = String(patch.address).trim();
     // rôle : super_admin uniquement via SQL / createAdmin
     if (patch.role && (await isStaffCaller())) {
-      payload.role = patch.role;
+      // admin peut fixer client | admin | courier (pas super_admin ici)
+      if (["client", "admin", "courier"].includes(patch.role)) {
+        payload.role = patch.role;
+      }
     }
     const { data, error } = await sb
       .from("profiles")

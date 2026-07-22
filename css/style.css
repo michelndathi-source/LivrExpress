@@ -3995,6 +3995,22 @@ body.modal-open {
   }
 }
 
+/* ===== Espace livreur profil lecture seule ===== */
+.courier-profile-readonly p {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+  color: var(--gray-700);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+
+.courier-profile-readonly strong {
+  min-width: 7rem;
+  color: var(--gray-900);
+  font-weight: 700;
+}
+
 /* ===== GPS localisation commande + carte ===== */
 .loc-mode-block {
   margin-top: 0.25rem;

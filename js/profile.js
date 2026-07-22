@@ -551,7 +551,20 @@
     );
   };
 
+  const getCourierByUserId = (userId) => {
+    if (!userId) return null;
+    return (
+      listCouriers(false).find((c) => c.userId === userId) || null
+    );
+  };
+
   const saveCourier = (courier) => {
+    // Sécurité : un livreur ne peut jamais modifier une fiche courier
+    const actor = global.Auth?.getCurrentUser?.();
+    if (actor && actor.role === "courier") {
+      console.warn("Livreur non autorisé à modifier sa fiche.");
+      return getCourier(courier.id) || courier;
+    }
     const map = readCouriers();
     map[courier.id] = { ...map[courier.id], ...courier };
     writeCouriers(map);
@@ -657,6 +670,7 @@
     listCouriers,
     getCourier,
     getCourierByName,
+    getCourierByUserId,
     saveCourier,
     enrichShipmentCourier,
     assignCourier,

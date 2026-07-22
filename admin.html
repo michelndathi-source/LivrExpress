@@ -161,10 +161,54 @@
         </section>
 
         <section class="dash-panel" data-panel="couriers" hidden>
-          <h2 class="dash-panel__title">Livreurs (profils publics)</h2>
+          <h2 class="dash-panel__title">Comptes livreurs</h2>
           <p class="dash-panel__desc">
-            Fiches transparentes visibles par les clients pendant le suivi.
+            <strong>Seul l’admin</strong> crée et modifie les livreurs (Auth + infos personnelles).
+            Le livreur ne peut pas changer son nom ni ses coordonnées (anti-fraude).
           </p>
+
+          <form id="addCourierForm" class="auth-form auth-form--grid profile-form admin-add-form">
+            <p class="order-form__section field--full" style="border:0;padding-top:0">Nouveau livreur + compte de connexion</p>
+            <div class="field">
+              <label class="field__label" for="crName">Nom complet *</label>
+              <input class="field__input" type="text" id="crName" required />
+            </div>
+            <div class="field">
+              <label class="field__label" for="crPhone">Téléphone service *</label>
+              <input class="field__input" type="tel" id="crPhone" required />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="crEmail">Email de connexion *</label>
+              <input class="field__input" type="email" id="crEmail" required placeholder="livreur@livrexpress.sn" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="crPassword">Mot de passe temporaire *</label>
+              <input class="field__input" type="text" id="crPassword" required minlength="6" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="crVehicle">Véhicule</label>
+              <input class="field__input" type="text" id="crVehicle" placeholder="Moto" value="Moto" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="crPlate">Immatriculation</label>
+              <input class="field__input" type="text" id="crPlate" placeholder="DK-0000-A" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="crZone">Zone</label>
+              <input class="field__input" type="text" id="crZone" placeholder="Plateau · Médina…" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="crBio">Bio (fiche publique)</label>
+              <textarea class="field__input" id="crBio" rows="2"></textarea>
+            </div>
+            <p class="order-form__error field--full" id="crFormError" hidden></p>
+            <p class="order-form__success field--full" id="crFormSuccess" hidden></p>
+            <div class="field--full">
+              <button type="submit" class="btn btn--primary">Créer le compte livreur</button>
+            </div>
+          </form>
+
+          <h3 class="dash-panel__title" style="margin-top:1.25rem;font-size:1.05rem">Équipe livreurs</h3>
           <div id="adminCouriersList" class="dash-list"></div>
         </section>
 

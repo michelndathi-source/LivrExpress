@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1d4ed8" />
+    <meta
+      name="description"
+      content="Espace livreur LivrExpress — courses dispo, GPS, historique."
+    />
+    <title>Espace livreur — LivrExpress</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="images/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/mobile-first.css" />
+  </head>
+  <body>
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="espace-livreur.html" class="logo">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a href="espace-livreur.html" class="nav__link nav__link--active">Mes courses</a>
+          <a href="suivi.html" class="nav__link">Suivi carte</a>
+          <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
+        </nav>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="dash" id="courierDash">
+      <div class="container">
+        <div class="dash__head">
+          <div>
+            <p class="dash__eyebrow">Espace livreur</p>
+            <h1 class="dash__title">Bonjour, <span id="courierHello">Livreur</span></h1>
+            <p class="dash__sub">
+              Activez une course disponible, partagez le GPS de votre téléphone de service,
+              et suivez vos livraisons. Vos infos personnelles sont gérées uniquement par l’admin.
+            </p>
+          </div>
+          <p class="dash-admin-user">
+            <span class="badge-status badge-status--ok">Compte sécurisé</span>
+          </p>
+        </div>
+
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="crStatAvail">0</p>
+            <p class="dash-stat__label">Dispo</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="crStatActive">0</p>
+            <p class="dash-stat__label">En cours</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="crStatDone">0</p>
+            <p class="dash-stat__label">Livrées</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="crStatRating">—</p>
+            <p class="dash-stat__label">Note</p>
+          </div>
+        </div>
+
+        <div class="dash-tabs" role="tablist">
+          <button type="button" class="dash-tab is-active" data-tab="available">Commandes dispo</button>
+          <button type="button" class="dash-tab" data-tab="active">Ma course + carte</button>
+          <button type="button" class="dash-tab" data-tab="history">Historique</button>
+          <button type="button" class="dash-tab" data-tab="profile">Mon profil</button>
+        </div>
+
+        <!-- Commandes disponibles -->
+        <section class="dash-panel is-active" data-panel="available">
+          <h2 class="dash-panel__title">Colis à prendre en charge</h2>
+          <p class="dash-panel__desc">
+            Activez une commande pour démarrer la livraison et le suivi GPS sur la carte.
+          </p>
+          <div id="courierAvailableList" class="dash-list"></div>
+        </section>
+
+        <!-- Course active + map -->
+        <section class="dash-panel" data-panel="active" hidden>
+          <h2 class="dash-panel__title">Course en cours</h2>
+          <p class="dash-panel__desc">
+            Activez le GPS de votre téléphone de service pour le suivi live client.
+          </p>
+          <div id="courierActiveList" class="dash-list"></div>
+          <div class="live-map-panel" id="courierMapPanel" hidden style="margin-top:1rem">
+            <header class="live-map-panel__head">
+              <div>
+                <p class="live-map-panel__eyebrow">GPS téléphone de service</p>
+                <h2 class="live-map-panel__title">Carte de ma livraison</h2>
+              </div>
+              <span class="live-map__badge" id="courierMapBadge">
+                <span class="live-map__badge-dot"></span>
+                <span class="live-map__badge-text">GPS</span>
+              </span>
+            </header>
+            <div class="live-map-wrap">
+              <div id="courierLiveMap" class="live-map"></div>
+            </div>
+            <div class="live-map-gps-bar">
+              <div class="live-map-gps-bar__actions">
+                <button type="button" class="btn btn--primary btn--sm" id="crGpsStart">🛵 Activer mon GPS</button>
+                <button type="button" class="btn btn--outline btn--sm" id="crGpsStop" hidden>Stop GPS</button>
+                <button type="button" class="btn btn--primary btn--sm" id="crMarkDelivered" hidden>Marquer livré</button>
+              </div>
+              <p class="field__hint" id="crGpsStatus" hidden></p>
+            </div>
+            <div class="live-map-stats">
+              <div class="live-map-stat">
+                <p class="live-map-stat__label">Position</p>
+                <p class="live-map-stat__value" id="mapLivePosition">—</p>
+              </div>
+              <div class="live-map-stat">
+                <p class="live-map-stat__label">Distance</p>
+                <p class="live-map-stat__value" id="mapLiveDistance">—</p>
+              </div>
+              <div class="live-map-stat">
+                <p class="live-map-stat__label">ETA</p>
+                <p class="live-map-stat__value" id="mapLiveEta">—</p>
+              </div>
+              <div class="live-map-stat live-map-stat--prog">
+                <p class="live-map-stat__label">Trajet</p>
+                <p class="live-map-stat__value" id="mapLiveProgress">—</p>
+                <div class="live-map-stat__bar"><span class="live-map-stat__bar-fill" id="mapLiveProgressBar"></span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Historique -->
+        <section class="dash-panel" data-panel="history" hidden>
+          <h2 class="dash-panel__title">Historique de livraisons</h2>
+          <p class="dash-panel__desc">Vos courses terminées, liées à la carte de suivi.</p>
+          <div id="courierHistoryList" class="dash-list"></div>
+        </section>
+
+        <!-- Profil lecture seule -->
+        <section class="dash-panel" data-panel="profile" hidden>
+          <h2 class="dash-panel__title">Mon profil livreur</h2>
+          <p class="dash-panel__desc">
+            <strong>Lecture seule.</strong> Seul l’administrateur peut créer ou modifier vos informations
+            (anti-fraude : impossible de changer nom ou coordonnées vous-même).
+          </p>
+          <article class="account-card" id="courierProfileCard">
+            <div class="courier-profile-readonly">
+              <p><strong>Nom</strong> <span id="crProfName">—</span></p>
+              <p><strong>Email</strong> <span id="crProfEmail">—</span></p>
+              <p><strong>Téléphone</strong> <span id="crProfPhone">—</span></p>
+              <p><strong>Véhicule</strong> <span id="crProfVehicle">—</span></p>
+              <p><strong>Immatriculation</strong> <span id="crProfPlate">—</span></p>
+              <p><strong>Zone</strong> <span id="crProfZone">—</span></p>
+              <p><strong>Note</strong> <span id="crProfRating">—</span></p>
+              <p><strong>Courses</strong> <span id="crProfCount">—</span></p>
+              <p><strong>Bio</strong> <span id="crProfBio">—</span></p>
+            </div>
+            <p class="field__hint" style="margin-top:1rem">
+              Profil public :
+              <a id="crPublicLink" href="livreur.html">voir la fiche client</a>
+            </p>
+          </article>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/geo-live.js"></script>
+    <script src="js/live-map.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

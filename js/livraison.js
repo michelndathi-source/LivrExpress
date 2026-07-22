@@ -567,7 +567,161 @@
     return { ok: true, count };
   };
 
-  /** Avance d’un cran le statut (simulation / ops) */
+  /**
+   * Colis disponibles pour un livreur (validés, pas encore livrés, non pris ou à assigner)
+   */
+  const listAvailableForCourier = () => {
+    seedDemosIfNeeded();
+    return listShipments().filter((s) => {
+      if (s.source === "demo") return false;
+      if (s.statusKey === "delivered") return false;
+      // Dispo si pas encore de livreur assigné, ou statut prepared/confirmed (prêt à l'enlèvement)
+      const free =
+        !s.assignedCourierUserId &&
+        !s.courierId &&
+        (s.statusKey === "confirmed" ||
+          s.statusKey === "prepared" ||
+          s.statusKey === "picked" ||
+          s.statusKey === "transit" ||
+          s.statusKey === "delivery");
+      // Si déjà enlevé sans assignation user, encore claimable si pas de courierId
+      return (
+        free ||
+        (!s.assignedCourierUserId &&
+          ["confirmed", "prepared"].includes(s.statusKey))
+      );
+    });
+  };
+
+  const listShipmentsForCourier = (userId) => {
+    if (!userId) return [];
+    return listShipments().filter(
+      (s) =>
+        s.assignedCourierUserId === userId ||
+        (s.courier && s.courier.userId === userId)
+    );
+  };
+
+  const listActiveForCourier = (userId) =>
+    listShipmentsForCourier(userId).filter((s) => s.statusKey !== "delivered");
+
+  const listHistoryForCourier = (userId) =>
+    listShipmentsForCourier(userId).filter((s) => s.statusKey === "delivered");
+
+  /**
+   * Livreur active une commande : s'assigne + démarre la course
+   */
+  const claimShipment = (trackingId, courierUser, courierProfile) => {
+    const shipment = getShipment(trackingId);
+    if (!shipment) return { ok: false, error: "Colis introuvable." };
+    if (shipment.statusKey === "delivered") {
+      return { ok: false, error: "Ce colis est déjà livré." };
+    }
+    if (
+      shipment.assignedCourierUserId &&
+      shipment.assignedCourierUserId !== courierUser.id
+    ) {
+      return { ok: false, error: "Ce colis est déjà pris par un autre livreur." };
+    }
+
+    const c = courierProfile || {
+      id: courierUser.courierId,
+      name: courierUser.name,
+      phone: courierUser.phone,
+      avatar: "🛵",
+    };
+
+    shipment.assignedCourierUserId = courierUser.id;
+    shipment.courierId = c.id || shipment.courierId;
+    shipment.courier = {
+      id: c.id,
+      userId: courierUser.id,
+      name: c.name,
+      phone: c.phone,
+      avatar: c.avatar || "🛵",
+      photoUrl: c.photoUrl || "",
+      vehicle: c.vehicle,
+      plate: c.plate,
+      zone: c.zone,
+      rating: c.rating,
+      verified: true,
+      meta: "Course activée",
+      profileUrl: c.id ? `livreur.html?id=${encodeURIComponent(c.id)}` : null,
+    };
+
+    // Avancer au moins à "picked" si encore en préparation
+    if (shipment.statusKey === "confirmed" || shipment.statusKey === "prepared") {
+      // force status picked with event
+      const nextKey =
+        shipment.statusKey === "confirmed" ? "prepared" : "picked";
+      // step through to picked
+      let guard = 0;
+      while (
+        shipment.statusKey !== "picked" &&
+        shipment.statusKey !== "delivered" &&
+        guard < 5
+      ) {
+        const idx = STATUS_INDEX[shipment.statusKey] ?? 0;
+        const next = PIPELINE[idx + 1];
+        if (!next) break;
+        shipment.statusKey = next.key;
+        addEvent(shipment, next.key, {
+          location: shipment.sender?.address || "",
+          desc: `Prise en charge par ${c.name}.`,
+          title: next.title,
+        });
+        guard += 1;
+      }
+      if (shipment.courier) shipment.courier.meta = "Colis enlevé · en route";
+    } else if (shipment.courier) {
+      shipment.courier.meta = "Course en cours";
+    }
+
+    shipment.updatedAt = new Date().toISOString();
+    saveShipment(shipment);
+
+    if (shipment.userId) {
+      notifyStatusChange(shipment, shipment.statusKey, {
+        message: `Votre colis est pris en charge par ${c.name}. Suivi GPS live activé.`,
+      });
+    }
+
+    return { ok: true, shipment };
+  };
+
+  /** Livreur marque comme livré */
+  const completeDeliveryByCourier = (trackingId, courierUser) => {
+    const shipment = getShipment(trackingId);
+    if (!shipment) return { ok: false, error: "Colis introuvable." };
+    if (shipment.assignedCourierUserId !== courierUser.id) {
+      return { ok: false, error: "Ce colis ne vous est pas assigné." };
+    }
+    if (shipment.statusKey === "delivered") {
+      return { ok: true, shipment };
+    }
+    // avancer jusqu'à delivered
+    let guard = 0;
+    let current = shipment;
+    while (current.statusKey !== "delivered" && guard < 8) {
+      current = advanceShipment(current.trackingId);
+      guard += 1;
+      if (!current) break;
+    }
+    // incrément compteur livreur
+    const Prof = global.LivrExpressProfile;
+    if (Prof && current?.courierId) {
+      const cr = Prof.getCourier(current.courierId);
+      if (cr) {
+        Prof.saveCourier({
+          ...cr,
+          deliveriesCount: (cr.deliveriesCount || 0) + 1,
+        });
+      }
+    }
+    return { ok: true, shipment: current };
+  };
+
+  /** Avance d’un cran le statut (ops admin / livreur) */
   const advanceShipment = (trackingId) => {
     const shipment = getShipment(trackingId);
     if (!shipment || shipment.statusKey === "delivered") return shipment;
@@ -1366,6 +1520,12 @@
     saveShipment,
     advanceShipment,
     setStatus,
+    listAvailableForCourier,
+    listShipmentsForCourier,
+    listActiveForCourier,
+    listHistoryForCourier,
+    claimShipment,
+    completeDeliveryByCourier,
     useSupabase,
     resolveSteps,
     resolveProgress,
