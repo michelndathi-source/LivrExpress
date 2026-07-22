@@ -73,6 +73,38 @@
     dock.id = "mobileDock";
     dock.className = "mobile-dock";
     dock.setAttribute("aria-label", "Navigation mobile");
+    // 4–5 items clairs (pas de double « Admin »)
+    const midHref = courier
+      ? "espace-livreur.html"
+      : staff
+        ? "admin.html"
+        : user
+          ? "espace-client.html?commander=1"
+          : orderHref;
+    const midLabel = courier ? "Courses" : staff ? "Admin" : "Envoyer";
+    const midIcon = courier ? "🛵" : staff ? "⚙️" : "＋";
+    const accountItemHref = courier
+      ? "espace-livreur.html"
+      : staff
+        ? "admin.html"
+        : user
+          ? "profil.html"
+          : "login.html";
+    const accountItemLabel = courier
+      ? "Profil"
+      : staff
+        ? "Panel"
+        : user
+          ? "Profil"
+          : "Compte";
+    const lastHref = courier
+      ? "suivi.html"
+      : staff
+        ? "suivi.html"
+        : "mes-colis.html";
+    const lastLabel = courier || staff ? "Carte" : "Colis";
+    const lastIcon = courier || staff ? "🗺️" : "📦";
+
     dock.innerHTML = `
       <div class="mobile-dock__inner">
         <a class="mobile-dock__item${isActive(["index.html", ""])}" href="index.html">
@@ -83,27 +115,17 @@
           <span class="mobile-dock__icon" aria-hidden="true">📍</span>
           Suivi
         </a>
-        <a class="mobile-dock__item mobile-dock__item--cta${isActive(["espace-client.html"])}" href="${orderHref}">
-          <span class="mobile-dock__icon" aria-hidden="true">＋</span>
-          Envoyer
+        <a class="mobile-dock__item mobile-dock__item--cta${isActive(["espace-client.html", "admin.html", "espace-livreur.html"])}" href="${midHref}">
+          <span class="mobile-dock__icon" aria-hidden="true">${midIcon}</span>
+          ${midLabel}
         </a>
-        <a class="mobile-dock__item${isActive(["profil.html", "livreur.html", "espace-livreur.html"])}" href="${
-          courier
-            ? "espace-livreur.html"
-            : user && !staff
-              ? "profil.html"
-              : accountHref
-        }">
+        <a class="mobile-dock__item${isActive(["profil.html", "livreur.html", "espace-livreur.html", "login.html"])}" href="${accountItemHref}">
           <span class="mobile-dock__icon" aria-hidden="true">👤</span>
-          ${courier ? "Profil" : user && !staff ? "Profil" : accountLabel}
+          ${accountItemLabel}
         </a>
-        <a class="mobile-dock__item${isActive(["admin.html", "mes-colis.html", "espace-livreur.html"])}" href="${
-          staff ? "admin.html" : courier ? "espace-livreur.html" : "mes-colis.html"
-        }">
-          <span class="mobile-dock__icon" aria-hidden="true">${
-            staff ? "⚙️" : courier ? "🛵" : "📦"
-          }</span>
-          ${staff ? "Admin" : courier ? "Courses" : "Colis"}
+        <a class="mobile-dock__item${isActive(["mes-colis.html", "suivi.html"])}" href="${lastHref}">
+          <span class="mobile-dock__icon" aria-hidden="true">${lastIcon}</span>
+          ${lastLabel}
         </a>
       </div>`;
     document.body.appendChild(dock);
