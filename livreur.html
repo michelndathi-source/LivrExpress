@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Profil livreur LivrExpress — identité, note, zone, véhicule. Transparence et confiance."
+    />
+    <meta name="theme-color" content="#1d4ed8" />
+    <title>Profil livreur — LivrExpress</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="images/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="index.html" class="logo">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a href="suivi.html" class="nav__link">Suivre un colis</a>
+          <a href="espace-client.html" class="nav__link">Mon espace</a>
+          <a href="index.html" class="nav__link">Accueil</a>
+        </nav>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="courier-page">
+      <div class="container">
+        <div class="account-empty" id="courierEmpty" hidden>
+          <p class="dash-empty">Livreur introuvable.</p>
+          <a href="suivi.html" class="btn btn--primary">Retour au suivi</a>
+        </div>
+
+        <article class="courier-profile" id="courierRoot" hidden>
+          <div class="courier-profile__banner">
+            <p class="courier-profile__eyebrow">Livreur vérifié LivrExpress</p>
+            <h1 class="courier-profile__title">Profil public du livreur</h1>
+            <p class="courier-profile__sub">
+              Transparence totale : identité, véhicule, zone et performance pour renforcer la confiance.
+            </p>
+          </div>
+
+          <div class="courier-profile__card">
+            <div class="courier-profile__left">
+              <div class="courier-avatar-xl" id="courierPhotoWrap">
+                <img id="courierPhoto" alt="" hidden />
+                <span id="courierAvatarEmoji">🛵</span>
+              </div>
+              <div class="courier-verified" id="courierVerified">
+                <span>✓</span> Identité vérifiée
+              </div>
+            </div>
+            <div class="courier-profile__right">
+              <h2 id="courierName">—</h2>
+              <p class="courier-profile__rating" id="courierRating">★ —</p>
+              <p class="courier-profile__bio" id="courierBio">—</p>
+              <div class="courier-facts">
+                <div class="courier-fact">
+                  <p class="courier-fact__label">Véhicule</p>
+                  <p class="courier-fact__value" id="courierVehicle">—</p>
+                </div>
+                <div class="courier-fact">
+                  <p class="courier-fact__label">Immatriculation</p>
+                  <p class="courier-fact__value" id="courierPlate">—</p>
+                </div>
+                <div class="courier-fact">
+                  <p class="courier-fact__label">Zone</p>
+                  <p class="courier-fact__value" id="courierZone">—</p>
+                </div>
+                <div class="courier-fact">
+                  <p class="courier-fact__label">Courses</p>
+                  <p class="courier-fact__value" id="courierCount">—</p>
+                </div>
+                <div class="courier-fact">
+                  <p class="courier-fact__label">Langues</p>
+                  <p class="courier-fact__value" id="courierLangs">—</p>
+                </div>
+                <div class="courier-fact">
+                  <p class="courier-fact__label">Depuis</p>
+                  <p class="courier-fact__value" id="courierJoined">—</p>
+                </div>
+              </div>
+              <div class="courier-profile__actions">
+                <a class="btn btn--primary" id="courierWa" href="#" target="_blank" rel="noopener">WhatsApp livreur</a>
+                <a class="btn btn--outline" id="courierCall" href="#">Appeler</a>
+                <a class="btn btn--ghost" href="suivi.html">Retour suivi</a>
+              </div>
+            </div>
+          </div>
+
+          <section class="courier-trust">
+            <h3>Pourquoi faire confiance ?</h3>
+            <ul class="courier-trust__list">
+              <li>Compte livreur validé par LivrExpress</li>
+              <li>Position GPS live pendant la course</li>
+              <li>Historique de courses et note clients</li>
+              <li>Contact direct WhatsApp / téléphone</li>
+            </ul>
+          </section>
+
+          <section class="courier-others">
+            <h3>Autres livreurs de l’équipe</h3>
+            <div class="courier-others__grid" id="courierOthers"></div>
+          </section>
+        </article>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Env secrets (ne pas committer de service_role)
+.env
+.env.local
+.env.*.local
+
+# Logs / temp
+*.log
+tmp/
+.cache/
+
+# Optional local overrides
+js/supabase-config.local.js

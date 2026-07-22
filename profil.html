@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Fiche compte LivrExpress — profil, activité, commandes." />
+    <meta name="theme-color" content="#1d4ed8" />
+    <title>Fiche compte — LivrExpress</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="images/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="index.html" class="logo">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a href="espace-client.html" class="nav__link">Mon espace</a>
+          <a href="suivi.html" class="nav__link">Suivre</a>
+          <a href="profil.html" class="nav__link nav__link--active">Mon compte</a>
+          <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
+        </nav>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="account-page" id="accountPage">
+      <div class="container">
+        <div class="account-empty" id="accountEmpty" hidden>
+          <p class="dash-empty">Compte introuvable ou accès non autorisé.</p>
+          <a href="espace-client.html" class="btn btn--primary">Retour à mon espace</a>
+        </div>
+
+        <div id="accountRoot" hidden>
+          <!-- Hero produit compte -->
+          <section class="account-hero">
+            <div class="account-hero__photo-wrap">
+              <div class="account-avatar" id="accountAvatar">
+                <img id="accountPhoto" alt="" hidden />
+                <span id="accountInitials">?</span>
+              </div>
+              <label class="account-photo-btn" id="accountPhotoLabel" hidden>
+                <input type="file" id="accountPhotoInput" accept="image/*" hidden />
+                Changer la photo
+              </label>
+            </div>
+            <div class="account-hero__info">
+              <p class="account-hero__eyebrow" id="accountRole">Client LivrExpress</p>
+              <h1 class="account-hero__name" id="accountName">—</h1>
+              <p class="account-hero__meta" id="accountMeta">—</p>
+              <div class="account-hero__badges">
+                <span class="account-tier" id="accountTier">Standard</span>
+                <span class="account-chip" id="accountCity">Dakar</span>
+                <span class="account-chip" id="accountIdChip">ID</span>
+              </div>
+              <p class="account-hero__bio" id="accountBio" hidden></p>
+              <div class="account-hero__actions" id="accountActions"></div>
+            </div>
+          </section>
+
+          <!-- Stats liées au compte -->
+          <div class="account-stats" id="accountStats">
+            <div class="account-stat">
+              <p class="account-stat__value" id="statOrders">0</p>
+              <p class="account-stat__label">Commandes</p>
+            </div>
+            <div class="account-stat">
+              <p class="account-stat__value" id="statActive">0</p>
+              <p class="account-stat__label">En cours</p>
+            </div>
+            <div class="account-stat">
+              <p class="account-stat__value" id="statDelivered">0</p>
+              <p class="account-stat__label">Livrés</p>
+            </div>
+            <div class="account-stat">
+              <p class="account-stat__value" id="statSpent">0</p>
+              <p class="account-stat__label">Total dépensé</p>
+            </div>
+          </div>
+
+          <div class="account-grid">
+            <!-- Infos personnelles -->
+            <section class="account-card">
+              <header class="account-card__head">
+                <h2>Informations personnelles</h2>
+                <span class="account-card__hint">Utilisées pour préremplir les commandes</span>
+              </header>
+              <form id="accountForm" class="auth-form auth-form--grid profile-form" novalidate>
+                <div class="field">
+                  <label class="field__label" for="accName">Nom complet</label>
+                  <input class="field__input" id="accName" required />
+                </div>
+                <div class="field">
+                  <label class="field__label" for="accPhone">Téléphone</label>
+                  <input class="field__input" id="accPhone" type="tel" />
+                </div>
+                <div class="field field--full">
+                  <label class="field__label" for="accEmail">Email</label>
+                  <input class="field__input" id="accEmail" type="email" disabled />
+                </div>
+                <div class="field">
+                  <label class="field__label" for="accCity">Ville</label>
+                  <input class="field__input" id="accCity" placeholder="Dakar" />
+                </div>
+                <div class="field">
+                  <label class="field__label" for="accNeighborhood">Quartier</label>
+                  <input class="field__input" id="accNeighborhood" placeholder="ex. Plateau" />
+                </div>
+                <div class="field field--full">
+                  <label class="field__label" for="accAddress">Adresse complète</label>
+                  <input class="field__input" id="accAddress" />
+                </div>
+                <div class="field field--full">
+                  <label class="field__label" for="accPickup">Adresse d’enlèvement par défaut</label>
+                  <input class="field__input" id="accPickup" placeholder="Préremplit le champ départ" />
+                </div>
+                <div class="field field--full">
+                  <label class="field__label" for="accDropoff">Zone de livraison habituelle</label>
+                  <input class="field__input" id="accDropoff" placeholder="ex. Almadies" />
+                </div>
+                <div class="field">
+                  <label class="field__label" for="accCompany">Entreprise (optionnel)</label>
+                  <input class="field__input" id="accCompany" />
+                </div>
+                <div class="field">
+                  <label class="field__label" for="accPlan">Formule préférée</label>
+                  <select class="field__input" id="accPlan">
+                    <option value="Express">Express</option>
+                    <option value="Pro">Pro</option>
+                    <option value="Business">Business</option>
+                  </select>
+                </div>
+                <div class="field field--full">
+                  <label class="field__label" for="accBio">À propos</label>
+                  <textarea class="field__input" id="accBio" rows="2" placeholder="Notes visibles sur votre fiche"></textarea>
+                </div>
+                <p class="order-form__error field--full" id="accError" hidden></p>
+                <p class="order-form__success field--full" id="accSuccess" hidden></p>
+                <div class="field--full account-form-actions" id="accSaveWrap">
+                  <button type="submit" class="btn btn--primary">Enregistrer mon compte</button>
+                  <a href="espace-client.html?commander=1" class="btn btn--outline">Nouvelle commande</a>
+                </div>
+              </form>
+            </section>
+
+            <!-- Activité liée au site -->
+            <section class="account-card">
+              <header class="account-card__head">
+                <h2>Activité & commandes</h2>
+                <span class="account-card__hint">Historique lié à ce compte</span>
+              </header>
+              <div class="account-zones" id="accountZones"></div>
+              <div class="account-activity" id="accountActivity"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

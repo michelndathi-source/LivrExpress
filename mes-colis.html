@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Mes numéros de suivi LivrExpress — consultez toutes vos expéditions."
+    />
+    <title>Mes colis &amp; n° de suivi — LivrExpress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="index.html" class="logo" aria-label="LivrExpress accueil">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+
+        <nav class="nav" id="nav" aria-label="Navigation principale">
+          <a href="index.html#tarifs" class="nav__link">Tarifs</a>
+          <a href="suivi.html" class="nav__link">Suivre</a>
+          <a href="espace-client.html" class="nav__link">Espace client</a>
+          <div class="nav__actions">
+            <a href="login.html" class="btn btn--outline btn--sm nav__login">Connexion</a>
+            <a href="index.html?commander=1" class="btn btn--primary btn--sm nav__cta">Commander</a>
+          </div>
+        </nav>
+
+        <button
+          class="nav-toggle"
+          id="navToggle"
+          type="button"
+          aria-label="Ouvrir le menu"
+          aria-expanded="false"
+          aria-controls="nav"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="track-page">
+        <div class="track-page__bg" aria-hidden="true"></div>
+        <div class="container">
+          <div class="track-page__intro">
+            <p class="badge">📋 Registre d’expéditions</p>
+            <h1 class="track-page__title">
+              Mes numéros de
+              <span class="text-gradient">suivi</span>
+            </h1>
+            <p class="track-page__subtitle">
+              Chaque commande génère un n° de suivi unique et une fiche produit.
+              Retrouvez ici toutes vos expéditions (y compris les démos).
+            </p>
+          </div>
+
+          <div class="shipments-toolbar">
+            <a href="index.html?commander=1" class="btn btn--primary">Nouvelle commande</a>
+            <a href="suivi.html" class="btn btn--outline">Rechercher un n°</a>
+          </div>
+
+          <div class="track-empty" id="shipmentsEmpty" hidden>
+            <div class="track-empty__icon" aria-hidden="true">📦</div>
+            <h2 class="track-empty__title">Aucune expédition</h2>
+            <p class="track-empty__text">
+              Passez une commande pour obtenir votre premier numéro de suivi.
+            </p>
+          </div>
+
+          <div class="shipments-list" id="shipmentsList" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer" id="contact">
+      <div class="container footer__grid">
+        <div class="footer__brand">
+          <a href="index.html" class="logo">
+            <span class="logo__mark">LE</span>
+            <span class="logo__text">Livr<span>Express</span></span>
+          </a>
+          <p class="footer__tagline">
+            Livraison rapide et fiable à Dakar. Votre partenaire express du quotidien.
+          </p>
+        </div>
+        <div class="footer__col">
+          <h3 class="footer__title">Contact</h3>
+          <ul class="footer__list">
+            <li><a href="tel:+221770000000">+221 77 000 00 00</a></li>
+            <li><a href="mailto:contact@livrexpress.sn">contact@livrexpress.sn</a></li>
+            <li>Plateau, Dakar — Sénégal</li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h3 class="footer__title">Liens</h3>
+          <ul class="footer__list">
+            <li><a href="suivi.html">Suivre mon colis</a></li>
+            <li><a href="mes-colis.html">Mes colis</a></li>
+            <li><a href="index.html?commander=1">Commander</a></li>
+          </ul>
+        </div>
+        <div class="footer__col">
+          <h3 class="footer__title">Réseaux sociaux</h3>
+          <div class="social">
+            <a href="https://wa.me/221770000000" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          </div>
+        </div>
+      </div>
+      <div class="container footer__bottom">
+        <p>© <span id="year"></span> LivrExpress. Tous droits réservés.</p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

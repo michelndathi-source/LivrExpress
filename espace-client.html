@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Espace client LivrExpress — commandes et suivi." />
+    <meta name="theme-color" content="#1d4ed8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LivrExpress" />
+    <title>Mon espace client — LivrExpress</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="images/icon-192.png" />
+    <link rel="icon" type="image/png" href="images/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="index.html" class="logo">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a href="espace-client.html" class="nav__link nav__link--active">Mon espace</a>
+          <a href="suivi.html" class="nav__link">Suivre un colis</a>
+          <a href="index.html" class="nav__link">Accueil</a>
+          <div class="notif-wrap" id="notifWrap">
+            <button
+              type="button"
+              class="notif-bell"
+              id="notifBell"
+              aria-label="Notifications"
+              aria-expanded="false"
+              aria-controls="notifPanel"
+              title="Notifications colis"
+            >
+              <span class="notif-bell__icon" aria-hidden="true">🔔</span>
+              <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
+            </button>
+            <div class="notif-panel" id="notifPanel" hidden role="region" aria-label="Notifications">
+              <header class="notif-panel__head">
+                <h2 class="notif-panel__title">Notifications</h2>
+                <button type="button" class="btn btn--ghost btn--sm" id="notifMarkAll">
+                  Tout lu
+                </button>
+              </header>
+              <div class="notif-panel__list" id="notifPanelList"></div>
+              <footer class="notif-panel__foot">
+                <button type="button" class="btn btn--outline btn--sm" data-open-notif-tab>
+                  Voir tout
+                </button>
+              </footer>
+            </div>
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
+        </nav>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="dash" id="clientDash">
+      <div class="container">
+        <div class="dash__head">
+          <div>
+            <p class="dash__eyebrow">Espace client</p>
+            <h1 class="dash__title">Bonjour, <span id="clientHello">Client</span></h1>
+            <p class="dash__sub">
+              Demandez une livraison, suivez vos colis validés et consultez votre historique.
+              Le n° de suivi n’est disponible qu’après validation par LivrExpress.
+            </p>
+          </div>
+          <button type="button" class="btn btn--primary" data-open-order id="clientOrderBtn">
+            Nouvelle demande
+          </button>
+        </div>
+
+        <!-- Activation notifications téléphone (sonnerie système) -->
+        <aside class="push-banner" id="pushBanner" hidden>
+          <div class="push-banner__icon" aria-hidden="true">🔔</div>
+          <div class="push-banner__body">
+            <p class="push-banner__title" id="pushBannerTitle">
+              Activez les alertes sur votre téléphone
+            </p>
+            <p class="push-banner__text" id="pushBannerText">
+              À chaque changement de statut de colis, votre téléphone affiche une notification
+              avec la <strong>sonnerie de notification</strong> de votre appareil — même si vous
+              quittez le site.
+            </p>
+            <p class="push-banner__status" id="pushBannerStatus" hidden></p>
+          </div>
+          <div class="push-banner__actions">
+            <button type="button" class="btn btn--primary btn--sm" id="pushEnableBtn">
+              Activer les notifications
+            </button>
+            <button type="button" class="btn btn--outline btn--sm" id="pushTestBtn" hidden>
+              Tester la sonnerie
+            </button>
+            <a
+              class="btn btn--outline btn--sm"
+              id="pushNtfyLink"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              hidden
+              >Alertes hors site</a
+            >
+            <button type="button" class="btn btn--ghost btn--sm" id="pushDismissBtn" title="Plus tard">
+              Plus tard
+            </button>
+          </div>
+        </aside>
+
+        <div class="dash-stats" id="clientStats">
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="statPending">0</p>
+            <p class="dash-stat__label">En attente</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="statActive">0</p>
+            <p class="dash-stat__label">En cours</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="statDelivered">0</p>
+            <p class="dash-stat__label">Livrés</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="statTotal">0</p>
+            <p class="dash-stat__label">Demandes</p>
+          </div>
+        </div>
+
+        <div class="dash-tabs" role="tablist">
+          <button type="button" class="dash-tab is-active" data-tab="orders">Mes demandes</button>
+          <button type="button" class="dash-tab" data-tab="shipments">Mes suivis</button>
+          <button type="button" class="dash-tab" data-tab="notifications">
+            Notifications
+            <span class="dash-tab__badge" id="notifTabBadge" hidden>0</span>
+          </button>
+          <button type="button" class="dash-tab" data-tab="profile">Mon profil</button>
+        </div>
+
+        <!-- Demandes -->
+        <section class="dash-panel is-active" id="tab-orders" data-panel="orders">
+          <h2 class="dash-panel__title">Demandes de livraison</h2>
+          <p class="dash-panel__desc">
+            Statut <strong>En attente</strong> = validation admin en cours. Après validation, vous recevez un n° de suivi.
+          </p>
+          <div id="clientOrdersList" class="dash-list"></div>
+        </section>
+
+        <!-- Suivis -->
+        <section class="dash-panel" id="tab-shipments" data-panel="shipments" hidden>
+          <h2 class="dash-panel__title">Colis avec n° de suivi</h2>
+          <p class="dash-panel__desc">Uniquement les commandes validées par l’administration.</p>
+          <div id="clientShipmentsList" class="dash-list"></div>
+        </section>
+
+        <!-- Notifications -->
+        <section class="dash-panel" id="tab-notifications" data-panel="notifications" hidden>
+          <div class="dash-panel__head-row">
+            <div>
+              <h2 class="dash-panel__title">Notifications colis</h2>
+              <p class="dash-panel__desc">
+                Vous êtes informé à chaque changement de statut de vos colis
+                (préparation, enlèvement, transit, livraison, remise).
+              </p>
+            </div>
+            <button type="button" class="btn btn--outline btn--sm" id="notifMarkAllPage">
+              Tout marquer comme lu
+            </button>
+          </div>
+          <div id="clientNotifList" class="dash-list"></div>
+        </section>
+
+        <!-- Profil -->
+        <section class="dash-panel" id="tab-profile" data-panel="profile" hidden>
+          <div class="dash-panel__head-row">
+            <div>
+              <h2 class="dash-panel__title">Mon profil</h2>
+              <p class="dash-panel__desc">
+                Photo, infos personnelles et préférences de commande. Ces données
+                préremplissent automatiquement vos demandes.
+              </p>
+            </div>
+            <a class="btn btn--outline btn--sm" href="profil.html" id="openFullProfile">
+              Fiche compte complète
+            </a>
+          </div>
+          <div class="profile-mini">
+            <div class="profile-mini__avatar" id="profileMiniAvatar">
+              <img id="profileMiniPhoto" alt="" hidden />
+              <span id="profileMiniInitials">?</span>
+            </div>
+            <label class="btn btn--outline btn--sm">
+              <input type="file" id="profileMiniPhotoInput" accept="image/*" hidden />
+              Photo de profil
+            </label>
+          </div>
+          <form id="profileForm" class="auth-form auth-form--grid profile-form" novalidate>
+            <div class="field">
+              <label class="field__label" for="profileName">Nom</label>
+              <input class="field__input" type="text" id="profileName" required />
+            </div>
+            <div class="field">
+              <label class="field__label" for="profilePhone">Téléphone</label>
+              <input class="field__input" type="tel" id="profilePhone" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="profileEmail">Email</label>
+              <input class="field__input" type="email" id="profileEmail" disabled />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="profileAddress">Adresse</label>
+              <input class="field__input" type="text" id="profileAddress" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="profileCity">Ville</label>
+              <input class="field__input" type="text" id="profileCity" placeholder="Dakar" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="profileNeighborhood">Quartier</label>
+              <input class="field__input" type="text" id="profileNeighborhood" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="profilePickup">Enlèvement par défaut</label>
+              <input class="field__input" type="text" id="profilePickup" />
+            </div>
+            <p class="order-form__error field--full" id="profileError" hidden></p>
+            <p class="order-form__success field--full" id="profileSuccess" hidden></p>
+            <div class="field--full">
+              <button type="submit" class="btn btn--primary">Enregistrer le profil</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+
+    <!-- Toasts notifications statut colis -->
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-relevant="additions"></div>
+
+    <!-- Modal commande (même structure que index, allégée) -->
+    <div class="modal" id="orderModal" hidden role="dialog" aria-modal="true" aria-labelledby="orderModalTitle">
+      <div class="modal__backdrop" data-close-order tabindex="-1"></div>
+      <div class="modal__dialog" role="document">
+        <header class="modal__header">
+          <div>
+            <p class="modal__eyebrow">Demande de livraison</p>
+            <h2 class="modal__title" id="orderModalTitle">Nouvelle commande</h2>
+          </div>
+          <button type="button" class="modal__close" data-close-order aria-label="Fermer">×</button>
+        </header>
+
+        <div id="orderFormPanel">
+          <form class="order-form" id="orderForm" novalidate>
+            <p class="order-form__intro">
+              Votre demande sera examinée par LivrExpress. Le <strong>n° de suivi</strong> sera
+              disponible uniquement après validation.
+            </p>
+            <div class="order-form__grid">
+              <p class="order-form__section field--full">1. Expéditeur</p>
+              <div class="field">
+                <label class="field__label" for="orderName">Nom de l’expéditeur *</label>
+                <input class="field__input" type="text" id="orderName" required />
+              </div>
+              <div class="field">
+                <label class="field__label" for="orderPhone">Tél. de l’expéditeur *</label>
+                <input class="field__input" type="tel" id="orderPhone" required />
+              </div>
+              <p class="order-form__section field--full">
+                2. Destinataire
+                <span class="order-form__section-note">(le livreur appellera ce numéro)</span>
+              </p>
+              <div class="field">
+                <label class="field__label" for="orderRecipient">Nom du destinataire *</label>
+                <input class="field__input" type="text" id="orderRecipient" required />
+              </div>
+              <div class="field">
+                <label class="field__label" for="orderRecipientPhone">N° téléphone destinataire *</label>
+                <input class="field__input" type="tel" id="orderRecipientPhone" required />
+              </div>
+              <p class="order-form__section field--full">3. Course</p>
+              <div class="field field--full">
+                <label class="field__label" for="orderPlan">Offre *</label>
+                <select class="field__input field__select" id="orderPlan" required>
+                  <option value="Express">Express — 1 500 FCFA</option>
+                  <option value="Pro">Pro — 2 500 FCFA</option>
+                  <option value="Business">Business — 45 000 FCFA / mois</option>
+                </select>
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="orderPickup">Adresse de départ *</label>
+                <input class="field__input" type="text" id="orderPickup" required />
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="orderDropoff">Adresse de livraison *</label>
+                <input class="field__input" type="text" id="orderDropoff" required />
+              </div>
+              <div class="field">
+                <label class="field__label" for="orderPackage">Type de colis</label>
+                <input class="field__input" type="text" id="orderPackage" placeholder="Documents, colis…" />
+              </div>
+              <div class="field">
+                <label class="field__label" for="orderWeight">Poids approx.</label>
+                <input class="field__input" type="text" id="orderWeight" placeholder="2 kg" />
+              </div>
+              <div class="field field--full">
+                <label class="field__label" for="orderNotes">Instructions</label>
+                <textarea class="field__input field__textarea" id="orderNotes" rows="2"></textarea>
+              </div>
+            </div>
+            <p class="order-form__error" id="orderError" role="alert" hidden></p>
+            <p class="order-form__success" id="orderSuccess" role="status" hidden></p>
+            <div class="order-form__actions">
+              <button type="button" class="btn btn--ghost" data-close-order>Annuler</button>
+              <button type="submit" class="btn btn--primary" id="orderSubmit">Envoyer la demande</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="order-success" id="orderSuccessPanel" hidden>
+          <div class="order-success__icon">📩</div>
+          <h3 class="order-success__title">Demande envoyée</h3>
+          <p class="order-success__text">
+            Votre demande est en attente de validation. Vous recevrez un n° de suivi dès qu’elle sera approuvée.
+          </p>
+          <div class="order-success__ticket">
+            <p class="order-success__ticket-label">Référence demande</p>
+            <p class="order-success__ticket-id" id="successTrackingId">—</p>
+            <div class="order-success__meta">
+              <span>Offre : <strong id="successPlan">—</strong></span>
+              <span>Statut : <strong id="successStatus">En attente</strong></span>
+            </div>
+          </div>
+          <div class="order-success__actions">
+            <button type="button" class="btn btn--primary" data-close-order>Retour à mon espace</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

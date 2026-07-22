@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Administration LivrExpress." />
+    <meta name="theme-color" content="#1d4ed8" />
+    <title>Admin — LivrExpress</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="images/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="admin.html" class="logo">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a href="admin.html" class="nav__link nav__link--active">Dashboard</a>
+          <a href="index.html" class="nav__link">Site public</a>
+          <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
+        </nav>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="dash dash--admin" id="adminDash">
+      <div class="container">
+        <div class="dash__head">
+          <div>
+            <p class="dash__eyebrow">Administration</p>
+            <h1 class="dash__title">Pilot de contrôle</h1>
+            <p class="dash__sub">
+              Validez les demandes (à l’unité ou en masse), gérez les livraisons et l’équipe admin.
+              Le n° de suivi n’est créé qu’après validation.
+            </p>
+          </div>
+          <div class="dash-admin-user-block">
+            <p class="dash-admin-user">
+              Connecté : <strong id="adminHello">Admin</strong>
+            </p>
+            <p class="dash-admin-role" id="adminRoleBadge">Admin</p>
+          </div>
+        </div>
+
+        <div class="dash-stats">
+          <div class="dash-stat dash-stat--warn">
+            <p class="dash-stat__value" id="adminStatPending">0</p>
+            <p class="dash-stat__label">À valider</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="adminStatActive">0</p>
+            <p class="dash-stat__label">Livraisons actives</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="adminStatDelivered">0</p>
+            <p class="dash-stat__label">Livrées</p>
+          </div>
+          <div class="dash-stat">
+            <p class="dash-stat__value" id="adminStatClients">0</p>
+            <p class="dash-stat__label">Clients</p>
+          </div>
+        </div>
+
+        <div class="dash-tabs" role="tablist">
+          <button type="button" class="dash-tab is-active" data-tab="pending">Demandes</button>
+          <button type="button" class="dash-tab" data-tab="shipments">Livraisons</button>
+          <button type="button" class="dash-tab" data-tab="clients">Clients / mapping</button>
+          <button type="button" class="dash-tab" data-tab="couriers">Livreurs</button>
+          <button type="button" class="dash-tab" data-tab="team" id="adminTeamTab" hidden>Équipe admin</button>
+        </div>
+
+        <section class="dash-panel is-active" data-panel="pending">
+          <h2 class="dash-panel__title">Demandes de commande</h2>
+          <p class="dash-panel__desc">
+            Validez pour générer le n° de suivi. Utilisez la sélection pour traiter en masse.
+          </p>
+          <div class="admin-filters">
+            <button type="button" class="btn btn--sm btn--primary" data-order-filter="pending">En attente</button>
+            <button type="button" class="btn btn--sm btn--outline" data-order-filter="approved">Validées</button>
+            <button type="button" class="btn btn--sm btn--outline" data-order-filter="rejected">Refusées</button>
+            <button type="button" class="btn btn--sm btn--ghost" data-order-filter="all">Toutes</button>
+          </div>
+          <div class="admin-bulk-bar" id="adminBulkBar">
+            <label class="admin-bulk-check">
+              <input type="checkbox" id="adminSelectAll" />
+              Tout sélectionner (en attente)
+            </label>
+            <div class="admin-bulk-actions">
+              <button type="button" class="btn btn--primary btn--sm" id="bulkApproveBtn">
+                Valider la sélection
+              </button>
+              <button type="button" class="btn btn--outline btn--sm" id="bulkRejectBtn">
+                Refuser la sélection
+              </button>
+              <span class="admin-bulk-count" id="bulkCount">0 sélectionnée(s)</span>
+            </div>
+          </div>
+          <div id="adminOrdersList" class="dash-list"></div>
+        </section>
+
+        <section class="dash-panel" data-panel="shipments" hidden>
+          <h2 class="dash-panel__title">Toutes les livraisons</h2>
+          <p class="dash-panel__desc">Avancez le statut des courses en cours.</p>
+          <div id="adminShipmentsList" class="dash-list"></div>
+        </section>
+
+        <section class="dash-panel" data-panel="clients" hidden>
+          <h2 class="dash-panel__title">Mapping clients</h2>
+          <p class="dash-panel__desc">
+            Filtrez et triez les comptes. Chaque fiche relie profil, commandes et suivi.
+          </p>
+          <div class="client-map-filters" id="clientMapFilters">
+            <input
+              class="field__input client-map-filters__search"
+              type="search"
+              id="clientMapQ"
+              placeholder="Rechercher nom, email, tél, zone…"
+            />
+            <select class="field__input" id="clientMapCity">
+              <option value="">Toutes villes</option>
+              <option value="Dakar">Dakar</option>
+            </select>
+            <select class="field__input" id="clientMapTier">
+              <option value="">Tous niveaux</option>
+              <option value="standard">Standard</option>
+              <option value="pro">Pro</option>
+              <option value="business">Business</option>
+              <option value="vip">VIP</option>
+            </select>
+            <select class="field__input" id="clientMapZone">
+              <option value="">Toutes zones</option>
+              <option value="Plateau">Plateau</option>
+              <option value="Médina">Médina</option>
+              <option value="Almadies">Almadies</option>
+              <option value="Ouakam">Ouakam</option>
+              <option value="Parcelles">Parcelles</option>
+              <option value="Mermoz">Mermoz</option>
+              <option value="Point E">Point E</option>
+            </select>
+            <select class="field__input" id="clientMapSort">
+              <option value="recent">Plus récents</option>
+              <option value="orders">Nb commandes</option>
+              <option value="spent">CA dépensé</option>
+              <option value="name">Nom A→Z</option>
+              <option value="tier">Niveau client</option>
+            </select>
+          </div>
+          <div id="adminClientsList" class="dash-list"></div>
+        </section>
+
+        <section class="dash-panel" data-panel="couriers" hidden>
+          <h2 class="dash-panel__title">Livreurs (profils publics)</h2>
+          <p class="dash-panel__desc">
+            Fiches transparentes visibles par les clients pendant le suivi.
+          </p>
+          <div id="adminCouriersList" class="dash-list"></div>
+        </section>
+
+        <section class="dash-panel" data-panel="team" id="adminTeamPanel" hidden>
+          <h2 class="dash-panel__title">Équipe d’administration</h2>
+          <p class="dash-panel__desc">
+            Réservé au <strong>super-admin</strong>
+            (<span id="superAdminEmailLabel"></span>.
+            Ajoutez des co-admins pour traiter les demandes en volume.
+          </p>
+
+          <form id="addAdminForm" class="auth-form auth-form--grid profile-form admin-add-form">
+            <p class="order-form__section field--full" style="border:0;padding-top:0">Nouveau co-admin</p>
+            <div class="field">
+              <label class="field__label" for="coAdminName">Nom *</label>
+              <input class="field__input" type="text" id="coAdminName" required placeholder="Prénom Nom" />
+            </div>
+            <div class="field">
+              <label class="field__label" for="coAdminPhone">Téléphone</label>
+              <input class="field__input" type="tel" id="coAdminPhone" placeholder="77 000 00 00" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="coAdminEmail">Email *</label>
+              <input class="field__input" type="email" id="coAdminEmail" required placeholder="coadmin@livrexpress.sn" />
+            </div>
+            <div class="field field--full">
+              <label class="field__label" for="coAdminPassword">Mot de passe temporaire *</label>
+              <input class="field__input" type="text" id="coAdminPassword" required minlength="6" placeholder="6 caractères min." />
+            </div>
+            <p class="order-form__error field--full" id="coAdminError" hidden></p>
+            <p class="order-form__success field--full" id="coAdminSuccess" hidden></p>
+            <div class="field--full">
+              <button type="submit" class="btn btn--primary">Ajouter le co-admin</button>
+            </div>
+          </form>
+
+          <h3 class="dash-panel__title" style="margin-top:1.5rem;font-size:1.05rem">Membres</h3>
+          <div id="adminTeamList" class="dash-list"></div>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

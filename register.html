@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Créer un compte client LivrExpress." />
+    <title>Inscription client — LivrExpress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body class="auth-body">
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="splash.html" class="logo">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+        <nav class="nav" id="nav">
+          <a href="login.html" class="btn btn--primary btn--sm nav__cta">Connexion</a>
+        </nav>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="auth-main">
+      <div class="auth-card auth-card--wide">
+        <p class="auth-card__eyebrow">Compte client</p>
+        <h1 class="auth-card__title">Créer mon compte</h1>
+        <p class="auth-card__sub">
+          Votre espace personnel : demander une livraison, suivre vos colis validés et consulter l’historique.
+        </p>
+
+        <form id="registerForm" class="auth-form auth-form--grid" novalidate>
+          <div class="field">
+            <label class="field__label" for="regName">Nom complet *</label>
+            <input class="field__input" type="text" id="regName" autocomplete="name" required placeholder="Ex. Aminata Ba" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="regPhone">Téléphone *</label>
+            <input class="field__input" type="tel" id="regPhone" autocomplete="tel" required placeholder="77 000 00 00" />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="regEmail">Email *</label>
+            <input class="field__input" type="email" id="regEmail" autocomplete="email" required placeholder="vous@email.com" />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="regAddress">Adresse (optionnel)</label>
+            <input class="field__input" type="text" id="regAddress" autocomplete="street-address" placeholder="Quartier, Dakar" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="regPassword">Mot de passe *</label>
+            <input class="field__input" type="password" id="regPassword" autocomplete="new-password" required placeholder="6 caractères min." />
+          </div>
+          <div class="field">
+            <label class="field__label" for="regPassword2">Confirmer *</label>
+            <input class="field__input" type="password" id="regPassword2" autocomplete="new-password" required placeholder="Retapez le mot de passe" />
+          </div>
+          <p class="order-form__error field--full" id="registerError" role="alert" hidden></p>
+          <div class="field--full">
+            <button type="submit" class="btn btn--primary btn--block btn--lg">Créer mon compte</button>
+          </div>
+        </form>
+
+        <p class="auth-card__footer">
+          Déjà inscrit ?
+          <a href="login.html">Se connecter</a>
+        </p>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

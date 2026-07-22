@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Suivez votre colis LivrExpress en temps réel à Dakar. Entrez votre numéro de suivi."
+    />
+    <title>Suivre mon colis — LivrExpress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="index.html" class="logo" aria-label="LivrExpress accueil">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+
+        <nav class="nav" id="nav" aria-label="Navigation principale">
+          <a href="index.html#tarifs" class="nav__link">Tarifs</a>
+          <a href="suivi.html" class="nav__link nav__link--active">Suivre</a>
+          <a href="espace-client.html" class="nav__link">Espace client</a>
+          <a href="index.html#contact" class="nav__link">Contact</a>
+          <div class="nav__actions">
+            <a href="login.html" class="btn btn--outline btn--sm nav__login">Connexion</a>
+            <a href="index.html?commander=1" class="btn btn--primary btn--sm nav__cta">Commander</a>
+          </div>
+        </nav>
+
+        <button
+          class="nav-toggle"
+          id="navToggle"
+          type="button"
+          aria-label="Ouvrir le menu"
+          aria-expanded="false"
+          aria-controls="nav"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Page intro + search -->
+      <section class="track-page">
+        <div class="track-page__bg" aria-hidden="true"></div>
+        <div class="container">
+          <div class="track-page__intro">
+            <p class="badge">📦 Suivi en temps réel</p>
+            <h1 class="track-page__title">
+              Où est mon
+              <span class="text-gradient">colis&nbsp;?</span>
+            </h1>
+            <p class="track-page__subtitle">
+              Entrez le n° de suivi pour afficher la <strong>carte Maps en direct</strong>,
+              la position GPS du colis, le pipeline de livraison et le livreur.
+            </p>
+          </div>
+
+          <form class="track-search" id="trackForm" novalidate>
+            <label class="track-search__label" for="trackInput">Numéro de suivi</label>
+            <div class="track-search__row">
+              <div class="track-search__field">
+                <span class="track-search__prefix" aria-hidden="true">#</span>
+                <input
+                  type="text"
+                  id="trackInput"
+                  name="tracking"
+                  class="track-search__input"
+                  placeholder="LX-260720-A3F9 ou LX-2847"
+                  autocomplete="off"
+                  spellcheck="false"
+                  required
+                  aria-describedby="trackHint trackError"
+                />
+              </div>
+              <button type="submit" class="btn btn--primary btn--lg track-search__btn">
+                Suivre mon colis
+              </button>
+            </div>
+            <p class="track-search__hint" id="trackHint">
+              Démos&nbsp;:
+              <button type="button" class="track-search__demo" data-demo="LX-5510">LX-5510</button> préparé
+              · <button type="button" class="track-search__demo" data-demo="LX-3301">LX-3301</button> enlevé
+              · <button type="button" class="track-search__demo" data-demo="LX-2847">LX-2847</button> livraison
+              · <button type="button" class="track-search__demo" data-demo="LX-1092">LX-1092</button> remis
+              · <a href="mes-colis.html">Tous mes n°</a>
+            </p>
+            <p class="track-search__error" id="trackError" role="alert" hidden></p>
+          </form>
+
+          <!-- Empty state -->
+          <div class="track-empty" id="trackEmpty">
+            <div class="track-empty__icon" aria-hidden="true">🔍</div>
+            <h2 class="track-empty__title">Recherchez votre colis</h2>
+            <p class="track-empty__text">
+              Le n° de suivi est créé à la commande et visible sur votre
+              <a href="mes-colis.html">liste de colis</a> et la fiche produit.
+            </p>
+          </div>
+
+          <!-- Result: extended hero-card -->
+          <div class="track-result" id="trackResult" hidden>
+            <!-- Carte Maps suivi live -->
+            <section class="live-map-panel" id="liveMapPanel" aria-label="Carte de suivi en direct">
+              <header class="live-map-panel__head">
+                <div>
+                  <p class="live-map-panel__eyebrow">OpenStreetMap · GPS live</p>
+                  <h2 class="live-map-panel__title">Carte de suivi en direct</h2>
+                </div>
+                <span class="live-map__badge" id="mapLiveBadge">
+                  <span class="live-map__badge-dot" aria-hidden="true"></span>
+                  <span class="live-map__badge-text">LIVE</span>
+                </span>
+              </header>
+              <div class="live-map-wrap">
+                <div id="liveMap" class="live-map" role="application" aria-label="Carte du colis"></div>
+                <div class="live-map-overlay" id="mapLoading" hidden>
+                  <span class="live-map-overlay__spin" aria-hidden="true"></span>
+                  Calcul de l’itinéraire…
+                </div>
+              </div>
+              <div class="live-map-stats" aria-live="polite">
+                <div class="live-map-stat">
+                  <p class="live-map-stat__label">Position GPS</p>
+                  <p class="live-map-stat__value" id="mapLivePosition">—</p>
+                </div>
+                <div class="live-map-stat">
+                  <p class="live-map-stat__label">Distance</p>
+                  <p class="live-map-stat__value" id="mapLiveDistance">—</p>
+                </div>
+                <div class="live-map-stat">
+                  <p class="live-map-stat__label">ETA live</p>
+                  <p class="live-map-stat__value" id="mapLiveEta">—</p>
+                </div>
+                <div class="live-map-stat live-map-stat--prog">
+                  <p class="live-map-stat__label">Avancement trajet</p>
+                  <p class="live-map-stat__value" id="mapLiveProgress">0% du trajet</p>
+                  <div class="live-map-stat__bar" aria-hidden="true">
+                    <span class="live-map-stat__bar-fill" id="mapLiveProgressBar"></span>
+                  </div>
+                </div>
+              </div>
+              <p class="live-map-legend">
+                <span><i class="lx-legend lx-legend--a"></i> Départ</span>
+                <span><i class="lx-legend lx-legend--hub"></i> Hub LivrExpress</span>
+                <span><i class="lx-legend lx-legend--b"></i> Destination</span>
+                <span><i class="lx-legend lx-legend--bike"></i> Colis / livreur live</span>
+              </p>
+            </section>
+
+            <div class="track-result__grid">
+              <!-- Main card (based on hero-card) -->
+              <article class="hero-card track-card" aria-live="polite">
+                <div class="hero-card__header">
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                  <span class="track-card__live" id="resultLive">
+                    <span class="track-card__live-dot"></span>
+                    <span class="track-card__live-text">Live</span>
+                  </span>
+                </div>
+                <div class="hero-card__body">
+                  <div class="track">
+                    <div class="track__icon" id="resultIcon">📦</div>
+                    <div>
+                      <p class="track__label" id="resultLabel">Colis en cours</p>
+                      <p class="track__id" id="resultId">#LX-2847</p>
+                    </div>
+                    <span class="track__status" id="resultStatus">En route</span>
+                  </div>
+
+                  <div class="progress-wrap">
+                    <div
+                      class="progress"
+                      role="progressbar"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-labelledby="resultProgressLabel"
+                    >
+                      <div class="progress__bar is-static" id="resultProgress" style="width: 0%"></div>
+                    </div>
+                    <p class="progress__label" id="resultProgressLabel">0% — En attente</p>
+                  </div>
+
+                  <ol class="stepper" id="resultSteps" aria-label="Étapes de la commande">
+                    <!-- Rempli par JS selon le statut réel -->
+                  </ol>
+
+                  <p class="track-guide" id="resultGuide">
+                    Entrez un numéro de suivi pour afficher l’état de la commande.
+                  </p>
+
+                  <div class="courier" id="resultCourier">
+                    <div class="courier__avatar" id="courierAvatar">🛵</div>
+                    <div class="courier__info">
+                      <p class="courier__name" id="courierName">Moussa D.</p>
+                      <p class="courier__meta" id="courierMeta">À 8 min · Plateau</p>
+                      <a
+                        href="livreur.html"
+                        class="courier__profile-link"
+                        id="courierProfileLink"
+                        hidden
+                      >Voir le profil livreur →</a>
+                    </div>
+                    <a
+                      href="https://wa.me/221770000000"
+                      class="btn btn--primary btn--sm"
+                      id="courierContact"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Contacter
+                    </a>
+                  </div>
+
+                  <div class="track-card__actions">
+                    <a href="fiche.html" class="btn btn--outline btn--sm" id="resultFicheLink" hidden>
+                      Fiche de suivi
+                    </a>
+                    <button type="button" class="btn btn--ghost btn--sm" id="advanceStatusBtn" hidden>
+                      Simuler étape suivante
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Side panel: route + timeline -->
+              <div class="track-aside">
+                <div class="track-panel">
+                  <h2 class="track-panel__title">Itinéraire</h2>
+                  <div class="track-route">
+                    <div class="track-route__point">
+                      <span class="track-route__marker track-route__marker--from" aria-hidden="true"></span>
+                      <div>
+                        <p class="track-route__label">Départ</p>
+                        <p class="track-route__place" id="routeFrom">Médina, Dakar</p>
+                        <p class="track-route__time" id="routeFromTime">Aujourd’hui · 14:12</p>
+                      </div>
+                    </div>
+                    <div class="track-route__line" aria-hidden="true"></div>
+                    <div class="track-route__point">
+                      <span class="track-route__marker track-route__marker--to" aria-hidden="true"></span>
+                      <div>
+                        <p class="track-route__label">Destination</p>
+                        <p class="track-route__place" id="routeTo">Plateau, Dakar</p>
+                        <p class="track-route__time" id="routeToTime">Arrivée estimée · 14:40</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="track-panel">
+                  <h2 class="track-panel__title">Destinataire (contact livreur)</h2>
+                  <div class="recipient-card">
+                    <div class="recipient-card__info">
+                      <p class="recipient-card__name" id="recipientName">—</p>
+                      <p class="recipient-card__phone" id="recipientPhone">—</p>
+                      <p class="recipient-card__address" id="recipientAddress">—</p>
+                    </div>
+                    <div class="recipient-card__actions">
+                      <a
+                        href="#"
+                        class="btn btn--primary btn--sm"
+                        id="recipientCall"
+                        hidden
+                      >
+                        Appeler
+                      </a>
+                      <a
+                        href="#"
+                        class="btn btn--outline btn--sm"
+                        id="recipientWhatsApp"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        hidden
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="track-panel">
+                  <h2 class="track-panel__title">Historique des scans</h2>
+                  <ol class="track-timeline" id="resultTimeline">
+                    <!-- filled by JS -->
+                  </ol>
+                </div>
+
+                <div class="track-panel track-panel--meta">
+                  <div class="track-meta track-meta--4">
+                    <div>
+                      <p class="track-meta__label">Statut</p>
+                      <p class="track-meta__value" id="metaStatus">—</p>
+                    </div>
+                    <div>
+                      <p class="track-meta__label">Type</p>
+                      <p class="track-meta__value" id="metaType">Express</p>
+                    </div>
+                    <div>
+                      <p class="track-meta__label">Poids</p>
+                      <p class="track-meta__value" id="metaWeight">2,5 kg</p>
+                    </div>
+                    <div>
+                      <p class="track-meta__label">ETA</p>
+                      <p class="track-meta__value" id="metaEta">8 min</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="track-help">
+              <p>
+                Un problème avec cette course&nbsp;?
+                <a
+                  href="https://wa.me/221770000000?text=Bonjour%20LivrExpress%2C%20j%27ai%20une%20question%20sur%20mon%20colis."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contacter le support
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="cta">
+        <div class="container cta__inner">
+          <div>
+            <h2 class="cta__title">Besoin d’envoyer un colis&nbsp;?</h2>
+            <p class="cta__text">
+              Commandez en un clic sur WhatsApp. Réponse immédiate, livreur en route.
+            </p>
+          </div>
+          <div class="cta__actions">
+            <a
+              href="https://wa.me/221770000000?text=Bonjour%20LivrExpress%2C%20je%20souhaite%20une%20livraison."
+              class="btn btn--white btn--lg"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp
+            </a>
+            <a href="index.html?commander=1" class="btn btn--ghost-light btn--lg">Commander</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+      <div class="container footer__grid">
+        <div class="footer__brand">
+          <a href="index.html" class="logo">
+            <span class="logo__mark">LE</span>
+            <span class="logo__text">Livr<span>Express</span></span>
+          </a>
+          <p class="footer__tagline">
+            Livraison rapide et fiable à Dakar. Votre partenaire express du quotidien.
+          </p>
+        </div>
+
+        <div class="footer__col">
+          <h3 class="footer__title">Contact</h3>
+          <ul class="footer__list">
+            <li>
+              <a href="tel:+221770000000">+221 77 000 00 00</a>
+            </li>
+            <li>
+              <a href="mailto:contact@livrexpress.sn">contact@livrexpress.sn</a>
+            </li>
+            <li>Plateau, Dakar — Sénégal</li>
+            <li>Lun – Dim · 8h – 22h</li>
+          </ul>
+        </div>
+
+        <div class="footer__col">
+          <h3 class="footer__title">Liens</h3>
+          <ul class="footer__list">
+            <li><a href="index.html#tarifs">Tarifs</a></li>
+            <li><a href="index.html#tarifs">Tarifs</a></li>
+            <li><a href="suivi.html">Suivre mon colis</a></li>
+            <li><a href="mes-colis.html">Mes colis / n° de suivi</a></li>
+            <li><a href="index.html?commander=1">Commander</a></li>
+          </ul>
+        </div>
+
+        <div class="footer__col">
+          <h3 class="footer__title">Réseaux sociaux</h3>
+          <div class="social">
+            <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              Facebook
+            </a>
+            <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              Instagram
+            </a>
+            <a href="https://wa.me/221770000000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+              WhatsApp
+            </a>
+            <a href="https://www.tiktok.com/" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              TikTok
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="container footer__bottom">
+        <p>© <span id="year"></span> LivrExpress. Tous droits réservés.</p>
+      </div>
+    </footer>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      crossorigin=""
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/live-map.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

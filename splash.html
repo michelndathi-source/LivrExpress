@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="LivrExpress — Chargement" />
+    <title>LivrExpress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body class="splash-body">
+    <div class="splash" id="splash" role="status" aria-live="polite" aria-label="Chargement LivrExpress">
+      <div class="splash__glow" aria-hidden="true"></div>
+
+      <div class="splash__center">
+        <div class="splash__icon-wrap" aria-hidden="true">
+          <svg
+            class="splash__icon"
+            viewBox="0 0 120 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect x="8" y="42" width="58" height="40" rx="6" fill="white" fill-opacity="0.95" />
+            <path d="M66 52h22l14 16v14H66V52z" fill="white" fill-opacity="0.95" />
+            <path d="M66 52v16h36" stroke="#1d4ed8" stroke-width="3" stroke-linejoin="round" />
+            <circle cx="30" cy="88" r="10" fill="#dbeafe" stroke="white" stroke-width="4" />
+            <circle cx="88" cy="88" r="10" fill="#dbeafe" stroke="white" stroke-width="4" />
+            <circle cx="30" cy="88" r="3.5" fill="#1e40af" />
+            <circle cx="88" cy="88" r="3.5" fill="#1e40af" />
+            <path
+              d="M18 42V34a6 6 0 016-6h28a6 6 0 016 6v8"
+              stroke="white"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M22 58h30"
+              stroke="#3b82f6"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-opacity="0.5"
+            />
+          </svg>
+        </div>
+
+        <p class="splash__brand">Livr<span>Express</span></p>
+        <p class="splash__tagline">Livraison rapide à Dakar</p>
+
+        <div class="splash__progress" aria-hidden="true">
+          <div class="splash__progress-track">
+            <div class="splash__progress-bar" id="splashBar"></div>
+          </div>
+          <p class="splash__percent" id="splashPercent">0%</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+      (function () {
+        // Se relance à chaque actualisation (pas de cache session)
+        const goNext = () => {
+          const Auth = window.Auth;
+          const user = Auth && Auth.getCurrentUser ? Auth.getCurrentUser() : null;
+          if (user) {
+            const staff =
+              user.role === "admin" || user.role === "super_admin";
+            location.replace(staff ? "admin.html" : "index.html");
+          } else {
+            location.replace("login.html");
+          }
+        };
+
+        if (window.Auth && typeof Auth.runSplash === "function") {
+          Auth.runSplash({ duration: 3000, fullPage: true }).then(goNext);
+        } else {
+          // fallback
+          const bar = document.getElementById("splashBar");
+          const percentEl = document.getElementById("splashPercent");
+          const start = performance.now();
+          const tick = (now) => {
+            const t = Math.min(1, (now - start) / 3000);
+            const pct = Math.round(t * 100);
+            if (bar) bar.style.width = pct + "%";
+            if (percentEl) percentEl.textContent = pct + "%";
+            if (t < 1) requestAnimationFrame(tick);
+            else goNext();
+          };
+          requestAnimationFrame(tick);
+        }
+      })();
+    </script>
+  </body>
+</html>

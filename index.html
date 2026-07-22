@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="LivrExpress — Livraison rapide à Dakar. Commandez en ligne, recevez en 30 minutes."
+    />
+    <title>LivrExpress — Livraison rapide à Dakar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header" id="header">
+      <div class="container header__inner">
+        <a href="#accueil" class="logo" aria-label="LivrExpress accueil">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+
+        <nav class="nav" id="nav" aria-label="Navigation principale">
+          <a href="#tarifs" class="nav__link">Tarifs</a>
+          <a href="suivi.html" class="nav__link">Suivre</a>
+          <a href="espace-client.html" class="nav__link">Espace client</a>
+          <a href="#contact" class="nav__link">Contact</a>
+          <div class="nav__actions">
+            <a href="login.html" class="btn btn--outline btn--sm nav__login">Connexion</a>
+            <button type="button" class="btn btn--primary btn--sm nav__cta" data-open-order>
+              Commander
+            </button>
+          </div>
+        </nav>
+
+        <button
+          class="nav-toggle"
+          id="navToggle"
+          type="button"
+          aria-label="Ouvrir le menu"
+          aria-expanded="false"
+          aria-controls="nav"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Hero -->
+      <section class="hero" id="accueil">
+        <div class="hero__bg" aria-hidden="true"></div>
+        <div class="container hero__grid">
+          <div class="hero__content">
+            <p class="badge">⚡ Livraison express à Dakar</p>
+            <h1 class="hero__title">
+              Vos colis livrés
+              <span class="text-gradient">en un temps record</span>
+            </h1>
+            <p class="hero__subtitle">
+              LivrExpress, c’est la livraison rapide, fiable et abordable à Dakar.
+              Commandez en ligne et recevez chez vous en 30 minutes.
+            </p>
+            <div class="hero__actions">
+              <button type="button" class="btn btn--primary btn--lg" data-open-order>
+                Commander maintenant
+              </button>
+              <a href="suivi.html" class="btn btn--ghost btn--lg">Suivre mon colis</a>
+            </div>
+            <ul class="hero__stats" aria-label="Chiffres clés">
+              <li>
+                <strong>30 min</strong>
+                <span>Délai moyen</span>
+              </li>
+              <li>
+                <strong>5 000+</strong>
+                <span>Clients satisfaits</span>
+              </li>
+              <li>
+                <strong>7j/7</strong>
+                <span>Service actif</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="hero__visual">
+            <div class="hero-card">
+              <div class="hero-card__header">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="track-card__live">
+                  <span class="track-card__live-dot"></span>
+                  <span class="track-card__live-text">Live</span>
+                </span>
+              </div>
+              <div class="hero-card__body">
+                <div class="track">
+                  <div class="track__icon">📦</div>
+                  <div>
+                    <p class="track__label">Colis en cours</p>
+                    <p class="track__id">#LX-2847</p>
+                  </div>
+                  <span class="track__status" id="heroStatus">En route</span>
+                </div>
+                <div class="progress-wrap">
+                  <div
+                    class="progress"
+                    role="progressbar"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="72"
+                    aria-label="Progression de la livraison"
+                  >
+                    <div class="progress__bar is-static" id="heroProgress" style="width: 72%"></div>
+                  </div>
+                </div>
+                <ol class="stepper stepper--compact stepper--6" id="heroStepper" aria-label="Étapes de la commande">
+                  <!-- Rempli par JS selon le statut réel de #LX-2847 -->
+                </ol>
+                <p class="track-guide track-guide--sm" id="heroGuide">
+                  Votre colis est en livraison. Suivez la position du livreur en temps réel.
+                </p>
+                <div class="courier">
+                  <div class="courier__avatar">🛵</div>
+                  <div>
+                    <p class="courier__name">Moussa D.</p>
+                    <p class="courier__meta">À 8 min · Plateau</p>
+                  </div>
+                  <a href="suivi.html?id=LX-2847" class="btn btn--primary btn--sm">Suivre</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Comment ça marche -->
+      <section class="section" id="comment">
+        <div class="container">
+          <div class="section__head">
+            <p class="section__eyebrow">Simple et rapide</p>
+            <h2 class="section__title">Comment ça marche</h2>
+            <p class="section__desc">
+              Trois étapes pour faire livrer n’importe quoi, n’importe où à Dakar.
+            </p>
+          </div>
+
+          <ol class="steps">
+            <li class="step">
+              <div class="step__num">01</div>
+              <div class="step__icon">📱</div>
+              <h3 class="step__title">Commandez</h3>
+              <p class="step__text">
+                Créez un compte, envoyez une demande de livraison. Après validation, un n° de suivi est généré.
+              </p>
+            </li>
+            <li class="step">
+              <div class="step__num">02</div>
+              <div class="step__icon">🛵</div>
+              <h3 class="step__title">On récupère</h3>
+              <p class="step__text">
+                Un livreur LivrExpress prend en charge votre colis et part immédiatement vers la destination.
+              </p>
+            </li>
+            <li class="step">
+              <div class="step__num">03</div>
+              <div class="step__icon">✅</div>
+              <h3 class="step__title">Recevez</h3>
+              <p class="step__text">
+                Suivez la course en direct et recevez votre colis en toute sécurité, en 30 minutes en moyenne.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Tarifs -->
+      <section class="section section--alt" id="tarifs">
+        <div class="container">
+          <div class="section__head">
+            <p class="section__eyebrow">Transparent</p>
+            <h2 class="section__title">Nos tarifs</h2>
+            <p class="section__desc">
+              Des offres claires adaptées à vos besoins, sans frais cachés.
+            </p>
+          </div>
+
+          <div class="pricing">
+            <article class="price-card">
+              <p class="price-card__plan">Express</p>
+              <p class="price-card__price"><span>1 500</span> FCFA</p>
+              <p class="price-card__note">Par course · zone urbaine</p>
+              <ul class="price-card__list">
+                <li>Livraison en 30–45 min</li>
+                <li>Suivi en temps réel</li>
+                <li>Support WhatsApp</li>
+                <li>Colis jusqu’à 5 kg</li>
+              </ul>
+              <button
+                type="button"
+                class="btn btn--outline btn--block"
+                data-open-order
+                data-plan="Express"
+              >
+                Choisir Express
+              </button>
+            </article>
+
+            <article class="price-card price-card--featured">
+              <span class="price-card__badge">Populaire</span>
+              <p class="price-card__plan">Pro</p>
+              <p class="price-card__price"><span>2 500</span> FCFA</p>
+              <p class="price-card__note">Par course · priorité</p>
+              <ul class="price-card__list">
+                <li>Livraison en 20–30 min</li>
+                <li>Priorité livreur</li>
+                <li>Suivi premium</li>
+                <li>Colis jusqu’à 10 kg</li>
+                <li>Assurance incluse</li>
+              </ul>
+              <button
+                type="button"
+                class="btn btn--primary btn--block"
+                data-open-order
+                data-plan="Pro"
+              >
+                Choisir Pro
+              </button>
+            </article>
+
+            <article class="price-card">
+              <p class="price-card__plan">Business</p>
+              <p class="price-card__price"><span>45 000</span> FCFA</p>
+              <p class="price-card__note">Par mois · illimité*</p>
+              <ul class="price-card__list">
+                <li>Jusqu’à 30 courses / mois</li>
+                <li>Compte dédié</li>
+                <li>Facturation mensuelle</li>
+                <li>Support prioritaire 7j/7</li>
+              </ul>
+              <button
+                type="button"
+                class="btn btn--outline btn--block"
+                data-open-order
+                data-plan="Business"
+              >
+                Nous contacter
+              </button>
+            </article>
+          </div>
+          <p class="pricing__footnote">* Conditions selon zone et volume. Tarifs hors banlieue éloignée.</p>
+        </div>
+      </section>
+
+      <!-- Témoignages -->
+      <section class="section" id="temoignages">
+        <div class="container">
+          <div class="section__head">
+            <p class="section__eyebrow">Ils nous font confiance</p>
+            <h2 class="section__title">Témoignages</h2>
+            <p class="section__desc">
+              Ce que disent nos clients à Dakar.
+            </p>
+          </div>
+
+          <div class="testimonials">
+            <article class="testimonial">
+              <div class="testimonial__stars" aria-label="5 sur 5">★★★★★</div>
+              <p class="testimonial__quote">
+                « LivrExpress m’a sauvé pour mes livraisons de boutique. Toujours à l’heure, livreurs pro. Je recommande à 100 %. »
+              </p>
+              <div class="testimonial__author">
+                <div class="testimonial__avatar" aria-hidden="true">AD</div>
+                <div>
+                  <p class="testimonial__name">Aïssatou Diop</p>
+                  <p class="testimonial__role">Commerçante · Médina</p>
+                </div>
+              </div>
+            </article>
+
+            <article class="testimonial">
+              <div class="testimonial__stars" aria-label="5 sur 5">★★★★★</div>
+              <p class="testimonial__quote">
+                « J’ai envoyé des documents urgents au Plateau. Reçu en 25 minutes. Service clair et prix honnête. »
+              </p>
+              <div class="testimonial__author">
+                <div class="testimonial__avatar" aria-hidden="true">MN</div>
+                <div>
+                  <p class="testimonial__name">Mamadou Ndiaye</p>
+                  <p class="testimonial__role">Entrepreneur · Almadies</p>
+                </div>
+              </div>
+            </article>
+
+            <article class="testimonial">
+              <div class="testimonial__stars" aria-label="5 sur 5">★★★★★</div>
+              <p class="testimonial__quote">
+                « Super expérience ! Suivi en direct, livreur sympa, colis intact. C’est mon service de livraison préféré à Dakar. »
+              </p>
+              <div class="testimonial__author">
+                <div class="testimonial__avatar" aria-hidden="true">FS</div>
+                <div>
+                  <p class="testimonial__name">Fatou Sarr</p>
+                  <p class="testimonial__role">Cliente · Ouakam</p>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Commander -->
+      <section class="cta" id="commander">
+        <div class="container cta__inner">
+          <div>
+            <h2 class="cta__title">Prêt à livrer avec LivrExpress ?</h2>
+            <p class="cta__text">
+              Remplissez le formulaire ou contactez-nous directement. Réponse immédiate, livreur en route.
+            </p>
+          </div>
+          <div class="cta__actions">
+            <button type="button" class="btn btn--white btn--lg" data-open-order>
+              Formulaire de commande
+            </button>
+            <a
+              href="https://wa.me/221770000000?text=Bonjour%20LivrExpress%2C%20je%20souhaite%20une%20livraison."
+              class="btn btn--ghost-light btn--lg"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal commande -->
+    <div
+      class="modal"
+      id="orderModal"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orderModalTitle"
+    >
+      <div class="modal__backdrop" data-close-order tabindex="-1"></div>
+      <div class="modal__dialog" role="document">
+        <header class="modal__header">
+          <div>
+            <p class="modal__eyebrow">Commander une livraison</p>
+            <h2 class="modal__title" id="orderModalTitle">Formulaire de contact</h2>
+          </div>
+          <button
+            type="button"
+            class="modal__close"
+            data-close-order
+            aria-label="Fermer le formulaire"
+          >
+            ×
+          </button>
+        </header>
+
+        <div id="orderFormPanel">
+          <form class="order-form" id="orderForm" novalidate>
+            <p class="order-form__intro">
+              Envoyez une demande de livraison. Après <strong>validation par LivrExpress</strong>,
+              un numéro de suivi vous sera attribué dans votre espace client.
+            </p>
+
+            <div class="order-form__grid">
+              <p class="order-form__section field--full">1. Expéditeur</p>
+
+              <div class="field">
+                <label class="field__label" for="orderName">Nom de l’expéditeur *</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderName"
+                  name="name"
+                  autocomplete="name"
+                  placeholder="Ex. Aminata Ba"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="orderPhone">Tél. de l’expéditeur *</label>
+                <input
+                  class="field__input"
+                  type="tel"
+                  id="orderPhone"
+                  name="phone"
+                  autocomplete="tel"
+                  placeholder="77 000 00 00"
+                  required
+                />
+              </div>
+
+              <p class="order-form__section field--full">
+                2. Destinataire
+                <span class="order-form__section-note">
+                  (le livreur appellera ce numéro en livraison)
+                </span>
+              </p>
+
+              <div class="field">
+                <label class="field__label" for="orderRecipient">Nom du destinataire *</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderRecipient"
+                  name="recipient"
+                  placeholder="Ex. Mamadou Ndiaye"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="orderRecipientPhone">
+                  N° de téléphone du destinataire *
+                </label>
+                <input
+                  class="field__input"
+                  type="tel"
+                  id="orderRecipientPhone"
+                  name="recipientPhone"
+                  autocomplete="tel"
+                  inputmode="tel"
+                  placeholder="77 000 00 00"
+                  required
+                />
+                <p class="field__hint">
+                  Obligatoire — le livreur utilise ce numéro pour contacter le destinataire
+                  pendant la course.
+                </p>
+              </div>
+
+              <p class="order-form__section field--full">3. Course</p>
+
+              <div class="field field--full">
+                <label class="field__label" for="orderPlan">Offre *</label>
+                <select class="field__input field__select" id="orderPlan" name="plan" required>
+                  <option value="Express">Express — 1 500 FCFA</option>
+                  <option value="Pro">Pro — 2 500 FCFA</option>
+                  <option value="Business">Business — 45 000 FCFA / mois</option>
+                </select>
+              </div>
+
+              <div class="field field--full">
+                <label class="field__label" for="orderPickup">Adresse de départ *</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderPickup"
+                  name="pickup"
+                  placeholder="Ex. Médina, près du marché"
+                  required
+                />
+              </div>
+
+              <div class="field field--full">
+                <label class="field__label" for="orderDropoff">Adresse de livraison *</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderDropoff"
+                  name="dropoff"
+                  placeholder="Ex. Plateau, rue x"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="orderPackage">Type de colis</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderPackage"
+                  name="package"
+                  placeholder="Documents, colis, courses…"
+                />
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="orderWeight">Poids approx.</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderWeight"
+                  name="weight"
+                  placeholder="Ex. 2 kg"
+                />
+              </div>
+
+              <div class="field field--full">
+                <label class="field__label" for="orderNotes">Message / instructions</label>
+                <textarea
+                  class="field__input field__textarea"
+                  id="orderNotes"
+                  name="notes"
+                  rows="3"
+                  placeholder="Horaires, code d’accès, urgences…"
+                ></textarea>
+              </div>
+            </div>
+
+            <p class="order-form__error" id="orderError" role="alert" hidden></p>
+            <p class="order-form__success" id="orderSuccess" role="status" hidden></p>
+
+            <div class="order-form__actions">
+              <button type="button" class="btn btn--ghost" data-close-order>Annuler</button>
+              <button type="submit" class="btn btn--primary" id="orderSubmit">
+                Créer ma commande
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="order-success" id="orderSuccessPanel" hidden>
+          <div class="order-success__icon" aria-hidden="true">📩</div>
+          <h3 class="order-success__title">Demande envoyée !</h3>
+          <p class="order-success__text">
+            Votre demande est en attente de validation par LivrExpress.
+            Le <strong>n° de suivi</strong> sera disponible après approbation.
+          </p>
+
+          <div class="order-success__ticket">
+            <p class="order-success__ticket-label">Référence de demande</p>
+            <p class="order-success__ticket-id" id="successTrackingId">—</p>
+            <div class="order-success__meta">
+              <span>Offre : <strong id="successPlan">—</strong></span>
+              <span>Statut : <strong id="successStatus">En attente</strong></span>
+            </div>
+            <button type="button" class="btn btn--outline btn--sm" id="copyTrackingBtn" hidden>
+              Copier
+            </button>
+          </div>
+
+          <div class="order-success__actions">
+            <a href="espace-client.html" class="btn btn--primary" id="successLinkTrack">Mon espace client</a>
+            <a href="fiche.html" class="btn btn--outline" id="successLinkFiche" hidden>Fiche</a>
+            <a
+              href="#"
+              class="btn btn--ghost"
+              id="successLinkWa"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              WhatsApp
+            </a>
+          </div>
+          <p class="order-success__hint">
+            Suivez l’état de vos demandes dans
+            <a href="espace-client.html">votre espace client</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+      <div class="container footer__grid">
+        <div class="footer__brand">
+          <a href="#accueil" class="logo">
+            <span class="logo__mark">LE</span>
+            <span class="logo__text">Livr<span>Express</span></span>
+          </a>
+          <p class="footer__tagline">
+            Livraison rapide et fiable à Dakar. Votre partenaire express du quotidien.
+          </p>
+        </div>
+
+        <div class="footer__col">
+          <h3 class="footer__title">Contact</h3>
+          <ul class="footer__list">
+            <li>
+              <a href="tel:+221770000000">+221 77 000 00 00</a>
+            </li>
+            <li>
+              <a href="mailto:contact@livrexpress.sn">contact@livrexpress.sn</a>
+            </li>
+            <li>Plateau, Dakar — Sénégal</li>
+            <li>Lun – Dim · 8h – 22h</li>
+          </ul>
+        </div>
+
+        <div class="footer__col">
+          <h3 class="footer__title">Liens</h3>
+          <ul class="footer__list">
+            <li><a href="#tarifs">Tarifs</a></li>
+            <li><a href="suivi.html">Suivre mon colis</a></li>
+            <li><a href="espace-client.html">Espace client</a></li>
+            <li><a href="login.html">Connexion</a></li>
+            <li><a href="admin.html">Admin</a></li>
+            <li><a href="#commander" data-open-order>Commander</a></li>
+          </ul>
+        </div>
+
+        <div class="footer__col">
+          <h3 class="footer__title">Réseaux sociaux</h3>
+          <div class="social">
+            <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              Facebook
+            </a>
+            <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              Instagram
+            </a>
+            <a href="https://wa.me/221770000000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp">
+              WhatsApp
+            </a>
+            <a href="https://www.tiktok.com/" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+              TikTok
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="container footer__bottom">
+        <p>© <span id="year"></span> LivrExpress. Tous droits réservés.</p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Fiche de suivi produit LivrExpress — étiquette, itinéraire et historique de livraison."
+    />
+    <title>Fiche de suivi — LivrExpress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="header no-print" id="header">
+      <div class="container header__inner">
+        <a href="index.html" class="logo" aria-label="LivrExpress accueil">
+          <span class="logo__mark">LE</span>
+          <span class="logo__text">Livr<span>Express</span></span>
+        </a>
+
+        <nav class="nav" id="nav" aria-label="Navigation principale">
+          <a href="index.html#tarifs" class="nav__link">Tarifs</a>
+          <a href="suivi.html" class="nav__link">Suivre</a>
+          <a href="espace-client.html" class="nav__link">Espace client</a>
+          <div class="nav__actions">
+            <a href="login.html" class="btn btn--outline btn--sm nav__login">Connexion</a>
+            <a href="index.html?commander=1" class="btn btn--primary btn--sm nav__cta">Commander</a>
+          </div>
+        </nav>
+
+        <button
+          class="nav-toggle"
+          id="navToggle"
+          type="button"
+          aria-label="Ouvrir le menu"
+          aria-expanded="false"
+          aria-controls="nav"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </header>
+
+    <main id="ficheRoot">
+      <section class="track-page fiche-page">
+        <div class="track-page__bg no-print" aria-hidden="true"></div>
+        <div class="container">
+          <div class="track-page__intro no-print">
+            <p class="badge">🏷️ Waybill / fiche produit</p>
+            <h1 class="track-page__title">
+              Fiche de
+              <span class="text-gradient">suivi</span>
+            </h1>
+            <p class="track-page__subtitle">
+              Document de transport LivrExpress : n° de suivi, parties, colis,
+              pipeline de livraison et historique scanné.
+            </p>
+          </div>
+
+          <div class="track-empty" id="ficheEmpty" hidden>
+            <div class="track-empty__icon" aria-hidden="true">🏷️</div>
+            <h2 class="track-empty__title">Fiche introuvable</h2>
+            <p class="track-empty__text">
+              Indiquez un n° valide via
+              <a href="suivi.html">Suivre</a> ou
+              <a href="mes-colis.html">Mes colis</a>.
+            </p>
+          </div>
+
+          <article class="waybill" id="ficheSheet" hidden>
+            <header class="waybill__header">
+              <div class="waybill__brand">
+                <span class="logo__mark">LE</span>
+                <div>
+                  <p class="waybill__company">LivrExpress</p>
+                  <p class="waybill__tag">Dakar Express Logistics</p>
+                </div>
+              </div>
+              <div class="waybill__doc">
+                <p class="waybill__doc-type">FICHE DE SUIVI / WAYBILL</p>
+                <p class="waybill__doc-sub">Document de transport non négociable</p>
+              </div>
+            </header>
+
+            <div class="waybill__tracking">
+              <div>
+                <p class="waybill__label">Numéro de suivi</p>
+                <p class="waybill__id" data-fiche-id>—</p>
+                <p class="waybill__barcode" data-fiche-barcode aria-hidden="true">—</p>
+              </div>
+              <div class="waybill__tracking-side">
+                <span class="track__status" data-fiche-status-badge>Statut</span>
+                <p class="waybill__meta-line">
+                  Service <strong data-fiche-plan>—</strong>
+                </p>
+                <p class="waybill__meta-line">
+                  Tarif <strong data-fiche-price>—</strong>
+                </p>
+              </div>
+            </div>
+
+            <div class="waybill__grid">
+              <section class="waybill__box">
+                <h2 class="waybill__box-title">Expéditeur (SHIP FROM)</h2>
+                <p class="waybill__name" data-fiche-sender-name>—</p>
+                <p data-fiche-sender-phone>—</p>
+                <p data-fiche-sender-address>—</p>
+              </section>
+              <section class="waybill__box">
+                <h2 class="waybill__box-title">Destinataire (SHIP TO)</h2>
+                <p class="waybill__name" data-fiche-recipient-name>—</p>
+                <p class="waybill__phone">
+                  <span class="waybill__phone-label">Tél. contact livreur :</span>
+                  <strong data-fiche-recipient-phone>—</strong>
+                </p>
+                <p data-fiche-recipient-address>—</p>
+              </section>
+            </div>
+
+            <div class="waybill__grid waybill__grid--3">
+              <section class="waybill__box">
+                <h2 class="waybill__box-title">Colis</h2>
+                <ul class="waybill__facts">
+                  <li><span>Type</span> <strong data-fiche-pkg-type>—</strong></li>
+                  <li><span>Poids</span> <strong data-fiche-pkg-weight>—</strong></li>
+                  <li><span>Pièces</span> <strong data-fiche-pkg-pieces>—</strong></li>
+                </ul>
+              </section>
+              <section class="waybill__box">
+                <h2 class="waybill__box-title">Planification</h2>
+                <ul class="waybill__facts">
+                  <li><span>Créé le</span> <strong data-fiche-created>—</strong></li>
+                  <li><span>ETA</span> <strong data-fiche-eta>—</strong></li>
+                  <li><span>Maj</span> <strong data-fiche-updated>—</strong></li>
+                </ul>
+              </section>
+              <section class="waybill__box">
+                <h2 class="waybill__box-title">Livreur</h2>
+                <p class="waybill__name" data-fiche-courier>—</p>
+                <p class="waybill__hint">Assignation dynamique selon tournée</p>
+              </section>
+            </div>
+
+            <section class="waybill__box waybill__box--full">
+              <h2 class="waybill__box-title">Description / instructions</h2>
+              <p data-fiche-pkg-desc>—</p>
+            </section>
+
+            <section class="waybill__pipeline">
+              <h2 class="waybill__box-title">Pipeline de livraison</h2>
+              <div class="progress-wrap">
+                <div class="progress">
+                  <div class="progress__bar is-static" id="ficheProgress" style="width: 0%"></div>
+                </div>
+              </div>
+              <ol class="stepper stepper--6" id="ficheStepper" aria-label="Étapes de livraison"></ol>
+            </section>
+
+            <section class="waybill__box waybill__box--full">
+              <h2 class="waybill__box-title">Historique des scans (events)</h2>
+              <ol class="track-timeline" id="ficheTimeline"></ol>
+            </section>
+
+            <footer class="waybill__footer">
+              <p>
+                LivrExpress · Plateau, Dakar · +221 77 000 00 00 · contact@livrexpress.sn
+              </p>
+              <p class="waybill__footer-note">
+                Conservez ce document. Scannez le n° de suivi sur
+                <strong>livrexpress</strong> pour le suivi temps réel.
+              </p>
+            </footer>
+          </article>
+
+          <div class="fiche-actions no-print" id="ficheActions">
+            <a href="suivi.html" class="btn btn--primary" id="ficheTrackLink">Ouvrir le suivi live</a>
+            <button type="button" class="btn btn--outline" id="fichePrintBtn">Imprimer la fiche</button>
+            <button type="button" class="btn btn--ghost" id="ficheAdvanceBtn">
+              Simuler étape suivante
+            </button>
+            <a href="mes-colis.html" class="btn btn--ghost">Tous les n°</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer no-print" id="contact">
+      <div class="container footer__bottom">
+        <p>© <span id="year"></span> LivrExpress. Tous droits réservés.</p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/livraison.js"></script>
+    <script src="js/push-notify.js"></script>
+    <script src="js/profile.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
