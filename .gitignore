@@ -21,3 +21,5 @@ tmp/
 
 # Optional local overrides
 js/supabase-config.local.js
+
+.vercel

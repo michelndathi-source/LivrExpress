@@ -771,14 +771,78 @@
     return { ok: true, user: publicUser(target) };
   };
 
+  /** Normalise le nom de page (Vercel cleanUrls: /login → login.html) */
+  const normalizePageFile = (raw) => {
+    let page = String(raw || "")
+      .split("?")[0]
+      .split("#")[0]
+      .toLowerCase()
+      .replace(/^\/+|\/+$/g, "");
+    if (!page || page === "/" || page === ".") return "index.html";
+    // dernier segment du chemin
+    if (page.includes("/")) page = page.split("/").pop() || "index.html";
+    if (!page.includes(".")) page = `${page}.html`;
+    return page;
+  };
+
+  const currentPageFile = () => {
+    const path = window.location.pathname || "";
+    const pop = path.split("/").filter(Boolean).pop() || "index.html";
+    return normalizePageFile(pop);
+  };
+
+  /**
+   * next sûr : jamais login/register, jamais récursif, longueur limitée
+   */
+  const sanitizeNext = (raw) => {
+    if (!raw) return "index.html";
+    let v = String(raw);
+    // décoder jusqu’à 3 fois (évite %253F loops)
+    for (let i = 0; i < 3; i++) {
+      try {
+        const d = decodeURIComponent(v);
+        if (d === v) break;
+        v = d;
+      } catch {
+        break;
+      }
+    }
+    // couper si boucle next=next=
+    if (/next=/i.test(v) || v.length > 120) return "index.html";
+    v = v.replace(/^\//, "").split("#")[0];
+    // interdire pages d’auth
+    const base = normalizePageFile(v.split("?")[0]);
+    if (
+      ["login.html", "register.html", "splash.html"].includes(base) ||
+      base === "login" ||
+      base === "register"
+    ) {
+      return "index.html";
+    }
+    // n’autoriser que .html locaux simples
+    if (!/^[a-z0-9._-]+\.html(\?[a-z0-9=&%._-]*)?$/i.test(v) && !/^[a-z0-9._-]+$/i.test(v.split("?")[0])) {
+      return "index.html";
+    }
+    if (!v.includes(".html")) v = normalizePageFile(v);
+    return v;
+  };
+
+  const buildLoginUrl = (nextFile) => {
+    const safe = sanitizeNext(nextFile);
+    if (!safe || safe === "index.html") return "login.html";
+    return `login.html?next=${encodeURIComponent(safe)}`;
+  };
+
   const requireAuth = (options = {}) => {
     const { role = null, redirect = "login.html" } = options;
     const user = getCurrentUser();
     if (!user) {
-      const next = encodeURIComponent(
-        window.location.pathname.split("/").pop() + window.location.search
-      );
-      window.location.href = `${redirect}?next=${next}`;
+      const file = currentPageFile();
+      // déjà sur login : ne pas reboucler
+      if (["login.html", "register.html", "splash.html"].includes(file)) {
+        return null;
+      }
+      window.location.href = buildLoginUrl(file + (window.location.search || ""));
       return null;
     }
     if (role) {
@@ -799,20 +863,26 @@
   };
 
   /** Pages accessibles sans connexion */
-  const PUBLIC_PAGES = ["splash.html", "login.html", "register.html"];
+  const PUBLIC_PAGES = [
+    "splash.html",
+    "login.html",
+    "register.html",
+    "index.html",
+    "suivi.html",
+    "fiche.html",
+    "livreur.html",
+  ];
 
   /**
-   * Protège tout le site : sans session → login.
-   * splash / login / register restent publics.
-   * (Le splash d’animation est géré à chaque chargement de page dans main.js)
+   * Protège le site : pages compte → login si pas de session.
+   * Évite les boucles next=login?next=login… (URI_TOO_LONG)
    */
   const guardSite = () => {
-    const page =
-      (window.location.pathname.split("/").pop() || "index.html").toLowerCase() ||
-      "index.html";
-    const file = page === "" || page === "/" ? "index.html" : page;
-
-    const isPublicAuthPage = PUBLIC_PAGES.includes(file);
+    const file = currentPageFile();
+    const isPublicAuthPage = ["splash.html", "login.html", "register.html"].includes(
+      file
+    );
+    const isPublicPage = PUBLIC_PAGES.includes(file);
 
     if (file === "splash.html") {
       return { allowed: true, user: getCurrentUser() };
@@ -821,9 +891,11 @@
     const user = getCurrentUser();
 
     if (!user) {
-      if (isPublicAuthPage) return { allowed: true, user: null };
-      const next = encodeURIComponent(file + (window.location.search || ""));
-      window.location.replace(`login.html?next=${next}`);
+      if (isPublicAuthPage || isPublicPage) {
+        return { allowed: true, user: null };
+      }
+      // pages protégées seulement
+      window.location.replace(buildLoginUrl(file));
       return { allowed: false, user: null };
     }
 
@@ -858,17 +930,6 @@
         window.location.replace("espace-livreur.html");
         return { allowed: false, user };
       }
-      // espace-client / profil client interdits
-      if (file === "espace-client.html" || file === "profil.html") {
-        window.location.replace("espace-livreur.html");
-        return { allowed: false, user };
-      }
-    }
-
-    // Clients / staff ne passent pas par l'espace livreur
-    if (file === "espace-client.html" && isCourierRole(user.role)) {
-      window.location.replace("espace-livreur.html");
-      return { allowed: false, user };
     }
 
     return { allowed: true, user };
@@ -1013,6 +1074,9 @@
     isAdminRole,
     isCourierRole,
     homeForRole,
+    sanitizeNext,
+    buildLoginUrl,
+    currentPageFile,
     useSupabase,
     publicUser,
     PUBLIC_PAGES,

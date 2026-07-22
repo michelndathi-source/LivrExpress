@@ -1279,24 +1279,20 @@
           return;
         }
         const params = new URLSearchParams(window.location.search);
-        const next = params.get("next");
+        const rawNext = params.get("next") || "";
+        const safeNext = Auth.sanitizeNext
+          ? Auth.sanitizeNext(rawNext)
+          : "espace-client.html";
         if (isStaff(result.user)) {
           window.location.href =
-            next && !next.includes("login") && next.includes("admin")
-              ? next
-              : "admin.html";
+            safeNext.includes("admin") ? safeNext : "admin.html";
         } else if (isCourier(result.user)) {
           window.location.href = "espace-livreur.html";
         } else {
-          const safeNext =
-            next &&
-            !next.includes("login") &&
-            !next.includes("register") &&
-            !next.includes("admin") &&
-            !next.includes("espace-livreur")
-              ? next
+          window.location.href =
+            safeNext && safeNext !== "index.html"
+              ? safeNext
               : "espace-client.html";
-          window.location.href = safeNext;
         }
       } finally {
         if (submitBtn) submitBtn.disabled = false;
