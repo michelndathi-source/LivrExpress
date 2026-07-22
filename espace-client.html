@@ -18,8 +18,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="css/style.css"
-    <link rel="stylesheet" href="css/mobile-first.css" /> />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/mobile-first.css" />
   </head>
   <body>
     <header class="header" id="header">
@@ -28,10 +28,17 @@
           <span class="logo__mark">LE</span>
           <span class="logo__text">Livr<span>Express</span></span>
         </a>
+
         <nav class="nav" id="nav">
           <a href="espace-client.html" class="nav__link nav__link--active">Mon espace</a>
           <a href="suivi.html" class="nav__link">Suivre un colis</a>
           <a href="index.html" class="nav__link">Accueil</a>
+          <a href="profil.html" class="nav__link">Mon profil</a>
+          <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
+        </nav>
+
+        <!-- Cloche toujours visible (hors menu burger) -->
+        <div class="header__end">
           <div class="notif-wrap" id="notifWrap">
             <button
               type="button"
@@ -45,28 +52,42 @@
               <span class="notif-bell__icon" aria-hidden="true">🔔</span>
               <span class="notif-bell__badge" id="notifBadge" hidden>0</span>
             </button>
-            <div class="notif-panel" id="notifPanel" hidden role="region" aria-label="Notifications">
-              <header class="notif-panel__head">
-                <h2 class="notif-panel__title">Notifications</h2>
-                <button type="button" class="btn btn--ghost btn--sm" id="notifMarkAll">
-                  Tout lu
-                </button>
-              </header>
-              <div class="notif-panel__list" id="notifPanelList"></div>
-              <footer class="notif-panel__foot">
-                <button type="button" class="btn btn--outline btn--sm" data-open-notif-tab>
-                  Voir tout
-                </button>
-              </footer>
-            </div>
           </div>
-          <button type="button" class="btn btn--ghost btn--sm" id="logoutBtn">Déconnexion</button>
-        </nav>
-        <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
-          <span></span><span></span><span></span>
-        </button>
+          <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
       </div>
     </header>
+
+    <!-- Overlay + panneau notifications (mobile sheet) -->
+    <div class="notif-overlay" id="notifOverlay" hidden></div>
+    <div
+      class="notif-panel"
+      id="notifPanel"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-label="Notifications"
+    >
+      <header class="notif-panel__head">
+        <h2 class="notif-panel__title">Notifications</h2>
+        <div class="notif-panel__head-actions">
+          <button type="button" class="btn btn--ghost btn--sm" id="notifMarkAll">
+            Tout lu
+          </button>
+          <button type="button" class="notif-panel__close" id="notifClose" aria-label="Fermer">
+            ×
+          </button>
+        </div>
+      </header>
+      <div class="notif-panel__list" id="notifPanelList"></div>
+      <footer class="notif-panel__foot">
+        <button type="button" class="btn btn--outline btn--sm" data-open-notif-tab>
+          Voir tout
+        </button>
+      </footer>
+    </div>
 
     <main class="dash" id="clientDash">
       <div class="container">

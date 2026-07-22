@@ -1732,23 +1732,57 @@
         });
     };
 
+    const notifOverlay = document.getElementById("notifOverlay");
+
     const setNotifPanelOpen = (open) => {
       if (!notifPanel || !notifBell) return;
-      notifPanel.hidden = !open;
+      if (open) {
+        notifPanel.hidden = false;
+        if (notifOverlay) {
+          notifOverlay.hidden = false;
+          requestAnimationFrame(() => notifOverlay.classList.add("is-open"));
+        }
+        requestAnimationFrame(() => notifPanel.classList.add("is-open"));
+        document.body.classList.add("notif-open");
+        // fermer le menu burger s’il est ouvert
+        const nav = document.getElementById("nav");
+        const toggle = document.getElementById("navToggle");
+        if (nav) nav.classList.remove("is-open");
+        if (toggle) {
+          toggle.setAttribute("aria-expanded", "false");
+          toggle.setAttribute("aria-label", "Ouvrir le menu");
+        }
+        refreshNotifUI();
+      } else {
+        notifPanel.classList.remove("is-open");
+        if (notifOverlay) notifOverlay.classList.remove("is-open");
+        document.body.classList.remove("notif-open");
+        setTimeout(() => {
+          notifPanel.hidden = true;
+          if (notifOverlay) notifOverlay.hidden = true;
+        }, 200);
+      }
       notifBell.setAttribute("aria-expanded", open ? "true" : "false");
     };
 
     if (notifBell && notifPanel) {
       notifBell.addEventListener("click", (e) => {
         e.stopPropagation();
-        setNotifPanelOpen(notifPanel.hidden);
-        if (!notifPanel.hidden) refreshNotifUI();
-      });
-      document.addEventListener("click", (e) => {
-        if (!notifWrap) return;
-        if (!notifWrap.contains(e.target)) setNotifPanelOpen(false);
+        const isOpen = notifBell.getAttribute("aria-expanded") === "true";
+        setNotifPanelOpen(!isOpen);
       });
     }
+
+    notifOverlay?.addEventListener("click", () => setNotifPanelOpen(false));
+    document.getElementById("notifClose")?.addEventListener("click", () =>
+      setNotifPanelOpen(false)
+    );
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && notifBell?.getAttribute("aria-expanded") === "true") {
+        setNotifPanelOpen(false);
+      }
+    });
 
     document.getElementById("notifMarkAll")?.addEventListener("click", () => {
       LX.markAllNotificationsRead?.(user.id);

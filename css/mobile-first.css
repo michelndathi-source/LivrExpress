@@ -495,14 +495,10 @@ a.btn,
     width: 100%;
   }
 
-  /* Notif panel full width under header */
-  .notif-panel {
-    position: fixed;
-    left: 0.65rem;
-    right: 0.65rem;
-    top: calc(var(--header-h) + var(--safe-t) + 0.35rem);
-    width: auto;
-    max-height: min(70vh, 28rem);
+  /* Cloche toujours visible à côté du burger */
+  .header__end {
+    position: relative;
+    z-index: 110;
   }
 }
 
