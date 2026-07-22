@@ -55,26 +55,27 @@ a.btn,
 /* ========== MOBILE ≤ 768px ========== */
 @media (max-width: 768px) {
   :root {
-    --header-h: 58px;
+    --header-h: 56px;
   }
 
   .container {
     width: min(100% - 1.5rem, var(--max));
   }
 
-  /* Header */
+  /* Header : hauteur = status bar + barre app (défini dans style.css) */
   .header {
-    height: auto;
-    min-height: var(--header-h);
-    padding-top: var(--safe-t);
+    height: calc(var(--header-h) + var(--sat, env(safe-area-inset-top, 0px)));
+    min-height: calc(var(--header-h) + var(--sat, env(safe-area-inset-top, 0px)));
+    padding-top: var(--sat, env(safe-area-inset-top, 0px));
+    background: #ffffff;
   }
 
   .header__inner {
+    height: var(--header-h);
     min-height: var(--header-h);
-    height: auto;
     gap: 0.4rem;
-    padding-top: 0.35rem;
-    padding-bottom: 0.35rem;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   .logo__text {

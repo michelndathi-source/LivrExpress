@@ -3,15 +3,23 @@
  * Notifications système (sonnerie / bannière téléphone) même hors onglet.
  */
 /* eslint-disable no-restricted-globals */
-const CACHE = "livrexpress-v1";
+const CACHE = "livrexpress-v3";
 const PRECACHE = [
   "./",
   "./index.html",
+  "./login.html",
   "./espace-client.html",
+  "./espace-livreur.html",
+  "./suivi.html",
   "./css/style.css",
+  "./css/mobile-first.css",
   "./js/auth.js",
   "./js/livraison.js",
   "./js/push-notify.js",
+  "./js/permission-modal.js",
+  "./js/geo-live.js",
+  "./js/profile.js",
+  "./js/pwa-install.js",
   "./js/main.js",
   "./images/icon-192.png",
   "./images/icon-512.png",

@@ -21,6 +21,11 @@
   --shadow: 0 10px 40px rgba(37, 99, 235, 0.12);
   --shadow-lg: 0 20px 50px rgba(30, 58, 138, 0.18);
   --header-h: 72px;
+  /* Safe areas téléphone (status bar / home indicator) */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
   --font: "Inter", system-ui, -apple-system, sans-serif;
   --max: 1120px;
 }
@@ -202,14 +207,21 @@ button.btn {
   -webkit-appearance: none;
 }
 
-/* ===== Header ===== */
+/* ===== Header (respecte la barre de statut iOS / Android) ===== */
 .header {
   position: sticky;
   top: 0;
   z-index: 100;
-  height: var(--header-h);
-  background: rgba(255, 255, 255, 0.9);
+  /* Hauteur totale = zone système + barre nav app */
+  height: calc(var(--header-h) + var(--sat));
+  padding-top: var(--sat);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+  box-sizing: border-box;
+  /* Fond opaque : l’heure et les icônes restent lisibles au-dessus */
+  background: #ffffff;
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -220,11 +232,19 @@ button.btn {
 }
 
 .header__inner {
-  height: 100%;
+  height: var(--header-h);
+  min-height: var(--header-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+/* En mode app installée, forcer le safe-area même si env() est 0 sur certains webviews */
+html.pwa-standalone .header,
+body.pwa-standalone .header {
+  /* min padding si le webview ne remonte pas env() correctement */
+  padding-top: max(var(--sat), 0px);
 }
 
 /* Zone droite : cloche + burger (toujours hors menu) */
@@ -2313,7 +2333,7 @@ body.lx-perm-open {
 /* Desktop : dropdown sous la cloche (à droite) */
 @media (min-width: 769px) {
   .notif-panel {
-    top: calc(var(--header-h) + 0.4rem);
+    top: calc(var(--header-h) + var(--sat) + 0.4rem);
     right: max(1rem, calc((100vw - var(--max)) / 2 + 1rem));
     width: min(22rem, calc(100vw - 2rem));
     max-height: min(70vh, 28rem);
@@ -2330,10 +2350,10 @@ body.lx-perm-open {
   }
 }
 
-/* Mobile : sheet plein largeur sous le header */
+/* Mobile : sheet plein largeur sous le header + status bar */
 @media (max-width: 768px) {
   .notif-panel {
-    top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+    top: calc(var(--header-h) + var(--sat));
     left: 0;
     right: 0;
     width: 100%;
@@ -4259,7 +4279,11 @@ body.modal-open {
 
   .nav {
     position: fixed;
-    inset: var(--header-h) 0 auto 0;
+    /* Sous le header + sous la barre de statut */
+    top: calc(var(--header-h) + var(--sat));
+    left: 0;
+    right: 0;
+    bottom: auto;
     z-index: 90;
     background: var(--white);
     flex-direction: column;
@@ -4441,8 +4465,10 @@ body.modal-open {
     right: 0;
     bottom: 0;
     z-index: 280;
-    padding: 0.4rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom, 0px));
-    background: rgba(255, 255, 255, 0.97);
+    padding: 0.4rem 0.5rem calc(0.45rem + var(--sab));
+    padding-left: max(0.5rem, var(--sal));
+    padding-right: max(0.5rem, var(--sar));
+    background: #ffffff;
     border-top: 1px solid var(--gray-200);
     box-shadow: 0 -10px 32px rgba(15, 23, 42, 0.1);
     backdrop-filter: blur(16px);
@@ -4524,12 +4550,73 @@ body.modal-open {
   }
 
   body.has-mobile-dock {
-    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4.35rem + var(--sab));
   }
 
   body.has-mobile-dock .footer__bottom {
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(1.25rem + var(--sab));
   }
+}
+
+/* Bannière installer l’app */
+.pwa-install {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(0.75rem + var(--sab));
+  z-index: 320;
+  pointer-events: none;
+}
+
+body.has-mobile-dock .pwa-install {
+  bottom: calc(4.5rem + var(--sab));
+}
+
+.pwa-install[hidden] {
+  display: none !important;
+}
+
+.pwa-install__card {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.75rem;
+  padding: 0.85rem 0.95rem;
+  background: #fff;
+  border: 1px solid var(--blue-100);
+  border-radius: 16px;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.16);
+}
+
+.pwa-install__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pwa-install__body {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.pwa-install__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--gray-900);
+}
+
+.pwa-install__text {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  line-height: 1.35;
+}
+
+.pwa-install__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
 @media (min-width: 769px) {
