@@ -33,12 +33,27 @@
     }
   };
 
-  /** Position courante (une fois) */
-  const getCurrentPosition = () =>
-    new Promise((resolve, reject) => {
+  /** Position courante (une fois) — options.skipPrompt pour éviter le double popup */
+  const getCurrentPosition = (options = {}) =>
+    new Promise(async (resolve, reject) => {
       if (!isSupported()) {
         reject(new Error("Géolocalisation non supportée sur cet appareil."));
         return;
+      }
+      if (!options.skipPrompt && global.LivrExpressPerm?.requestGeolocation) {
+        const r = await global.LivrExpressPerm.requestGeolocation(
+          options.variant || "geolocation"
+        );
+        if (!r.ok) {
+          reject(
+            new Error(
+              r.reason === "dismissed"
+                ? "Localisation non activée."
+                : "GPS indisponible."
+            )
+          );
+          return;
+        }
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -91,8 +106,8 @@
    * Capturer la position client pour une livraison
    * @returns {{ lat, lng, accuracy, label, source, at }}
    */
-  const captureClientGps = async () => {
-    const pos = await getCurrentPosition();
+  const captureClientGps = async (options = {}) => {
+    const pos = await getCurrentPosition(options);
     const label = await reverseGeocode(pos.lat, pos.lng);
     return {
       ...pos,
@@ -167,11 +182,20 @@
   /**
    * Démarre le partage GPS du téléphone livreur pour un colis
    */
-  const startCourierTracking = (trackingId, onUpdate) => {
+  const startCourierTracking = async (trackingId, onUpdate) => {
     if (!isSupported()) {
       return { ok: false, error: "GPS non supporté." };
     }
     if (!trackingId) return { ok: false, error: "N° de suivi manquant." };
+
+    // Popup design avant permission native
+    if (global.LivrExpressPerm?.requestGeolocation) {
+      const r = await global.LivrExpressPerm.requestGeolocation("courier");
+      if (!r.ok) {
+        return { ok: false, error: "Activation GPS reportée." };
+      }
+    }
+
     stopCourierTracking(trackingId);
 
     const watchId = navigator.geolocation.watchPosition(
@@ -217,9 +241,13 @@
   /**
    * Partage ponctuel / suivi léger de la position client (optionnel pendant livraison)
    */
-  const startClientTracking = (trackingId, onUpdate) => {
+  const startClientTracking = async (trackingId, onUpdate) => {
     if (!isSupported() || !trackingId) {
       return { ok: false, error: "GPS indisponible." };
+    }
+    if (global.LivrExpressPerm?.requestGeolocation) {
+      const r = await global.LivrExpressPerm.requestGeolocation("geolocation");
+      if (!r.ok) return { ok: false, error: "Localisation non activée." };
     }
     const key = `client:${trackingId}`;
     if (watches.has(key)) {

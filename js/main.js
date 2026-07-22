@@ -938,8 +938,8 @@
       syncBtns();
 
       if (startBtn) {
-        startBtn.onclick = () => {
-          const res = Geo.startCourierTracking(tid, (pos, err) => {
+        startBtn.onclick = async () => {
+          const res = await Geo.startCourierTracking(tid, (pos, err) => {
             if (err) {
               setStatus(err.message || "GPS livreur erreur");
               return;
@@ -966,8 +966,8 @@
         };
       }
       if (clientBtn) {
-        clientBtn.onclick = () => {
-          const res = Geo.startClientTracking(tid, (pos) => {
+        clientBtn.onclick = async () => {
+          const res = await Geo.startClientTracking(tid, (pos) => {
             if (pos) {
               setStatus(
                 `Position client partagée · ±${Math.round(pos.accuracy || 0)} m`
@@ -2834,13 +2834,21 @@
           alert(res.error);
           return;
         }
-        // Démarrer GPS
+        // Démarrer GPS (popup design puis permission native)
         if (Geo?.startCourierTracking) {
           Geo.startCourierTracking(tid, (pos) => {
             const st = document.getElementById("crGpsStatus");
             if (st && pos) {
               st.hidden = false;
               st.textContent = `GPS actif · ±${Math.round(pos.accuracy || 0)} m`;
+            }
+          }).then((res) => {
+            if (res && !res.ok) {
+              const st = document.getElementById("crGpsStatus");
+              if (st) {
+                st.hidden = false;
+                st.textContent = res.error || "GPS non activé";
+              }
             }
           });
         }
@@ -2878,12 +2886,12 @@
     });
 
     // GPS controls
-    document.getElementById("crGpsStart")?.addEventListener("click", () => {
+    document.getElementById("crGpsStart")?.addEventListener("click", async () => {
       if (!activeTrackingId) {
         alert("Aucune course active.");
         return;
       }
-      const res = Geo?.startCourierTracking?.(activeTrackingId, (pos) => {
+      const res = await Geo?.startCourierTracking?.(activeTrackingId, (pos) => {
         const st = document.getElementById("crGpsStatus");
         if (st && pos) {
           st.hidden = false;
@@ -2893,7 +2901,10 @@
           LX.getShipment(activeTrackingId)
         );
       });
-      if (res && !res.ok) alert(res.error);
+      if (res && !res.ok) {
+        alert(res.error);
+        return;
+      }
       document.getElementById("crGpsStart").hidden = true;
       document.getElementById("crGpsStop").hidden = false;
     });

@@ -1802,6 +1802,193 @@ html.splash-active body > *:not(.splash):not(#splashOverlay) {
   }
 }
 
+/* ===== Popup autorisation (notif / GPS) — design site ===== */
+.lx-perm {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.lx-perm[hidden] {
+  display: none !important;
+}
+
+.lx-perm__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.lx-perm.is-open .lx-perm__backdrop {
+  opacity: 1;
+}
+
+.lx-perm__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 22.5rem);
+  padding: 1.5rem 1.35rem 1.25rem;
+  background: var(--white);
+  border-radius: 20px;
+  border: 1px solid var(--blue-100, #dbeafe);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  text-align: center;
+  transform: translateY(16px) scale(0.96);
+  opacity: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+  overflow: hidden;
+}
+
+.lx-perm.is-open .lx-perm__dialog {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.lx-perm__glow {
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  width: 140%;
+  height: 70%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(37, 99, 235, 0.16),
+    transparent 65%
+  );
+  pointer-events: none;
+}
+
+.lx-perm__icon-wrap {
+  position: relative;
+  width: 4.25rem;
+  height: 4.25rem;
+  margin: 0 auto 0.85rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(145deg, var(--blue-50), #fff);
+  border: 3px solid var(--blue-100);
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.18);
+}
+
+.lx-perm__icon {
+  font-size: 1.85rem;
+  line-height: 1;
+}
+
+.lx-perm__brand {
+  position: relative;
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+
+.lx-perm__brand span {
+  color: var(--blue-600);
+}
+
+.lx-perm__title {
+  position: relative;
+  margin: 0 0 0.45rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--gray-900);
+  line-height: 1.25;
+}
+
+.lx-perm__lead {
+  position: relative;
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  color: var(--gray-600);
+  line-height: 1.45;
+}
+
+.lx-perm__list {
+  position: relative;
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0.75rem 0.85rem;
+  text-align: left;
+  background: var(--blue-50, #eff6ff);
+  border-radius: 12px;
+  border: 1px solid var(--blue-100, #dbeafe);
+}
+
+.lx-perm__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  line-height: 1.35;
+  margin: 0 0 0.45rem;
+}
+
+.lx-perm__list li:last-child {
+  margin-bottom: 0;
+}
+
+.lx-perm__check {
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--blue-600);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  margin-top: 0.1rem;
+}
+
+.lx-perm__foot {
+  position: relative;
+  margin: 0 0 1.1rem;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  line-height: 1.4;
+}
+
+.lx-perm__actions {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+}
+
+.lx-perm__actions .btn {
+  width: 100%;
+}
+
+body.lx-perm-open {
+  overflow: hidden;
+}
+
+@media (min-width: 480px) {
+  .lx-perm__actions {
+    flex-direction: row;
+  }
+
+  .lx-perm__actions .btn {
+    flex: 1;
+  }
+}
+
 /* ===== Bannière activation notifs téléphone ===== */
 .push-banner {
   display: flex;

@@ -98,9 +98,22 @@
     const sw = await registerServiceWorker();
     if (!sw.ok) return sw;
 
+    // Popup design LivrExpress avant le dialogue natif
     let perm = Notification.permission;
     if (perm === "default") {
-      perm = await Notification.requestPermission();
+      const Perm = global.LivrExpressPerm;
+      if (Perm?.requestNotifications) {
+        const r = await Perm.requestNotifications();
+        perm = r.permission || Notification.permission;
+        if (r.permission === "dismissed") {
+          return {
+            ok: false,
+            error: "Activation des notifications reportée.",
+          };
+        }
+      } else {
+        perm = await Notification.requestPermission();
+      }
     }
     if (perm !== "granted") {
       return {
