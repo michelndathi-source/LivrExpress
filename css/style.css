@@ -4558,66 +4558,7 @@ body.modal-open {
   }
 }
 
-/* Bannière installer l’app */
-.pwa-install {
-  position: fixed;
-  left: 0.75rem;
-  right: 0.75rem;
-  bottom: calc(0.75rem + var(--sab));
-  z-index: 320;
-  pointer-events: none;
-}
-
-body.has-mobile-dock .pwa-install {
-  bottom: calc(4.5rem + var(--sab));
-}
-
-.pwa-install[hidden] {
-  display: none !important;
-}
-
-.pwa-install__card {
-  pointer-events: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.65rem 0.75rem;
-  padding: 0.85rem 0.95rem;
-  background: #fff;
-  border: 1px solid var(--blue-100);
-  border-radius: 16px;
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.16);
-}
-
-.pwa-install__icon {
-  font-size: 1.5rem;
-  line-height: 1;
-}
-
-.pwa-install__body {
-  flex: 1 1 10rem;
-  min-width: 0;
-}
-
-.pwa-install__title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: var(--gray-900);
-}
-
-.pwa-install__text {
-  margin: 0.15rem 0 0;
-  font-size: 0.8rem;
-  color: var(--gray-600);
-  line-height: 1.35;
-}
-
-.pwa-install__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
+/* Bannière PWA : styles injectés par js/pwa-install.js (modèle la-restauration) */
 
 @media (min-width: 769px) {
   .mobile-dock {

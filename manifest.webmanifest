@@ -1,17 +1,19 @@
 {
+  "id": "./",
   "name": "LivrExpress",
   "short_name": "LivrExpress",
-  "description": "Livraison rapide à Dakar — suivi colis GPS, commandes et notifications",
+  "description": "Livraison rapide à Dakar. Commandez, suivez votre colis en direct.",
   "start_url": "./index.html",
   "scope": "./",
-  "id": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
-  "orientation": "portrait-primary",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
   "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#1d4ed8",
   "lang": "fr",
   "dir": "ltr",
+  "categories": ["business", "utilities", "shopping"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "./images/icon-192.png",
@@ -38,8 +40,6 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["business", "utilities", "shopping"],
-  "prefer_related_applications": false,
   "shortcuts": [
     {
       "name": "Suivre un colis",
@@ -48,9 +48,15 @@
       "icons": [{ "src": "./images/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Mon espace",
-      "short_name": "Compte",
-      "url": "./espace-client.html",
+      "name": "Commander",
+      "short_name": "Commander",
+      "url": "./espace-client.html?commander=1",
+      "icons": [{ "src": "./images/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Connexion",
+      "short_name": "Connexion",
+      "url": "./login.html",
       "icons": [{ "src": "./images/icon-192.png", "sizes": "192x192" }]
     }
   ]
