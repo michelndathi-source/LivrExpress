@@ -1,0 +1,547 @@
+/**
+ * LivrExpress — Mobile-first UI/UX (priorité téléphone)
+ * Chargé après style.css — 90 % des usages = mobile
+ */
+
+:root {
+  --touch-min: 48px;
+  --dock-h: 64px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --header-h: 60px;
+  --container-pad: 1rem;
+}
+
+/* Base tactile + iOS */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  padding-bottom: 0;
+}
+
+body.has-mobile-dock {
+  padding-bottom: calc(var(--dock-h) + var(--safe-b) + 0.75rem);
+}
+
+/* Empêche le zoom auto iOS sur les champs */
+input,
+select,
+textarea,
+.field__input,
+.track-search__input {
+  font-size: 16px !important;
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button,
+a.btn,
+.btn {
+  touch-action: manipulation;
+}
+
+/* Zones tactiles confortables */
+.btn {
+  min-height: var(--touch-min);
+  padding-left: 1.15rem;
+  padding-right: 1.15rem;
+}
+
+.btn--sm {
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn--lg {
+  min-height: 52px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.nav__link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Container mobile-first */
+.container {
+  width: min(100% - (var(--container-pad) * 2), var(--max));
+}
+
+/* Header compact mobile */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding-top: var(--safe-t);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.header__inner {
+  min-height: var(--header-h);
+  gap: 0.5rem;
+}
+
+.logo__text {
+  font-size: 1.05rem;
+}
+
+/* ===== Mobile dock (barre bas d’écran) ===== */
+.mobile-dock {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  padding: 0.35rem 0.4rem calc(0.35rem + var(--safe-b));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--gray-200);
+  box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.mobile-dock__inner {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.15rem;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.mobile-dock__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 52px;
+  padding: 0.25rem 0.15rem;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mobile-dock__item:active,
+.mobile-dock__item.is-active {
+  color: var(--blue-700);
+  background: var(--blue-50);
+}
+
+.mobile-dock__icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.mobile-dock__item--cta {
+  color: var(--blue-700);
+}
+
+.mobile-dock__item--cta .mobile-dock__icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: grid;
+  place-items: center;
+  background: var(--blue-600);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+/* ===== Mobile-first layout defaults (téléphone d’abord) ===== */
+@media (max-width: 900px) {
+  .mobile-dock {
+    display: block;
+  }
+
+  .hero {
+    padding: 1.25rem 0 2rem;
+  }
+
+  .hero__grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .hero__visual {
+    order: -1;
+  }
+
+  .hero__title {
+    font-size: clamp(1.65rem, 7vw, 2.15rem);
+    line-height: 1.15;
+  }
+
+  .hero__subtitle {
+    font-size: 0.98rem;
+  }
+
+  .hero__actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+  }
+
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .hero-card,
+  .track-card {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  .section {
+    padding: 2.25rem 0;
+  }
+
+  .section__title {
+    font-size: 1.45rem;
+  }
+
+  .steps,
+  .pricing,
+  .testimonials,
+  .track-result__grid {
+    grid-template-columns: 1fr;
+    max-width: none;
+  }
+
+  .price-card--featured {
+    transform: none;
+  }
+
+  /* Dashboards */
+  .dash {
+    padding: 1rem 0 2rem;
+  }
+
+  .dash__head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .dash__title {
+    font-size: 1.4rem;
+  }
+
+  .dash__head .btn,
+  .dash__head > .btn {
+    width: 100%;
+  }
+
+  .dash-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.55rem;
+  }
+
+  .dash-stat {
+    padding: 0.75rem 0.65rem;
+  }
+
+  .dash-stat__value {
+    font-size: 1.25rem;
+  }
+
+  .dash-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.35rem;
+    padding-bottom: 0.35rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .dash-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dash-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    min-height: 42px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .dash-card {
+    padding: 0.95rem;
+  }
+
+  .dash-card__actions {
+    flex-wrap: wrap;
+  }
+
+  .dash-card__actions .btn {
+    flex: 1 1 auto;
+    min-width: calc(50% - 0.35rem);
+  }
+
+  /* Auth */
+  .auth-page,
+  .auth-card {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .auth-form--grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field__input,
+  .field__label {
+    width: 100%;
+  }
+
+  /* Modal commande full-screen mobile */
+  .modal {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .modal__dialog {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal__header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--white);
+  }
+
+  .order-form,
+  .order-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-form .btn--lg,
+  .order-form [type="submit"] {
+    width: 100%;
+    position: sticky;
+    bottom: 0;
+  }
+
+  /* Suivi */
+  .track-page {
+    padding-top: 1.25rem;
+  }
+
+  .track-page__title {
+    font-size: 1.55rem;
+  }
+
+  .track-search__row {
+    flex-direction: column;
+  }
+
+  .track-search__btn {
+    width: 100%;
+  }
+
+  .track-search__field {
+    width: 100%;
+  }
+
+  .live-map-wrap {
+    height: min(52vh, 360px);
+    min-height: 240px;
+  }
+
+  .live-map-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .courier {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .courier .btn {
+    width: 100%;
+  }
+
+  /* Admin filters */
+  .client-map-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-bulk-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-bulk-actions {
+    width: 100%;
+  }
+
+  .admin-bulk-actions .btn {
+    flex: 1;
+  }
+
+  /* Compte / livreur */
+  .account-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .account-grid,
+  .courier-profile__card {
+    grid-template-columns: 1fr;
+  }
+
+  .courier-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .account-hero {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .account-hero__badges,
+  .account-hero__actions {
+    justify-content: center;
+  }
+
+  .account-form-actions .btn {
+    width: 100%;
+  }
+
+  /* Push banner */
+  .push-banner {
+    flex-direction: column;
+  }
+
+  .push-banner__actions {
+    width: 100%;
+  }
+
+  .push-banner__actions .btn {
+    flex: 1 1 calc(50% - 0.3rem);
+  }
+
+  /* Toast au-dessus du dock */
+  .toast-stack {
+    bottom: calc(var(--dock-h) + var(--safe-b) + 0.75rem);
+    left: 0.65rem;
+    right: 0.65rem;
+    width: auto;
+  }
+
+  /* Footer moins lourd */
+  .footer {
+    padding-bottom: 1rem;
+  }
+
+  .footer__grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  /* Stepper denser */
+  .stepper__icon {
+    display: none;
+  }
+
+  .stepper__label {
+    font-size: 0.62rem;
+  }
+
+  /* CTA */
+  .cta__inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .cta__actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .cta__actions .btn {
+    width: 100%;
+  }
+
+  /* Notif panel full width under header */
+  .notif-panel {
+    position: fixed;
+    left: 0.65rem;
+    right: 0.65rem;
+    top: calc(var(--header-h) + var(--safe-t) + 0.35rem);
+    width: auto;
+    max-height: min(70vh, 28rem);
+  }
+}
+
+/* Très petits écrans */
+@media (max-width: 380px) {
+  .hero__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mobile-dock__item {
+    font-size: 0.6rem;
+  }
+}
+
+/* Tablette+ : dock masqué, desktop layout revient */
+@media (min-width: 901px) {
+  .mobile-dock {
+    display: none !important;
+  }
+
+  body.has-mobile-dock {
+    padding-bottom: 0;
+  }
+
+  .btn--lg {
+    width: auto;
+  }
+}
+
+/* Préférence réduction de mouvement */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

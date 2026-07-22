@@ -57,7 +57,14 @@ Données : **Supabase** (Auth + Postgres) si configuré, sinon **localStorage**.
 
 Guide : **[SUPABASE.md](./SUPABASE.md)**
 
-## Lancer
+## 📱 Lien mobile (tests & partage)
+
+**https://michelndathi-source.github.io/LivrExpress/**
+
+Design **mobile-first** (dock bas, gros boutons, formulaires iOS/Android).  
+Guide : **[MOBILE.md](./MOBILE.md)**
+
+## Lancer en local
 
 ```bash
 # Depuis le dossier du projet
@@ -68,4 +75,4 @@ Puis ouvrir `http://localhost:5500/splash.html` ou `login.html`.
 
 ## GitHub
 
-Dépôt : https://github.com/michelndathi-source/livrexpress
+Dépôt : https://github.com/michelndathi-source/LivrExpress

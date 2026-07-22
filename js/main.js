@@ -26,6 +26,70 @@
     if (!gate.allowed) return; // redirection en cours
   }
 
+  // ——— Barre de navigation mobile (dock bas d’écran) ———
+  const injectMobileDock = () => {
+    if (document.getElementById("mobileDock")) return;
+    const page = (
+      window.location.pathname.split("/").pop() || "index.html"
+    ).toLowerCase();
+    // pas de dock sur splash / auth pure
+    if (["splash.html", "login.html", "register.html"].includes(page)) return;
+
+    const user = Auth ? Auth.getCurrentUser() : null;
+    const staff = isStaff(user);
+    const accountHref = staff
+      ? "admin.html"
+      : user
+        ? "espace-client.html"
+        : "login.html";
+    const accountLabel = staff ? "Admin" : user ? "Compte" : "Connexion";
+    const orderHref = user
+      ? staff
+        ? "admin.html"
+        : "espace-client.html?commander=1"
+      : "login.html?next=" + encodeURIComponent("espace-client.html?commander=1");
+
+    const isActive = (names) =>
+      names.some((n) => page === n || page.startsWith(n.replace(".html", "")))
+        ? " is-active"
+        : "";
+
+    const dock = document.createElement("nav");
+    dock.id = "mobileDock";
+    dock.className = "mobile-dock";
+    dock.setAttribute("aria-label", "Navigation mobile");
+    dock.innerHTML = `
+      <div class="mobile-dock__inner">
+        <a class="mobile-dock__item${isActive(["index.html", ""])}" href="index.html">
+          <span class="mobile-dock__icon" aria-hidden="true">🏠</span>
+          Accueil
+        </a>
+        <a class="mobile-dock__item${isActive(["suivi.html", "fiche.html"])}" href="suivi.html">
+          <span class="mobile-dock__icon" aria-hidden="true">📍</span>
+          Suivi
+        </a>
+        <a class="mobile-dock__item mobile-dock__item--cta${isActive(["espace-client.html"])}" href="${orderHref}">
+          <span class="mobile-dock__icon" aria-hidden="true">＋</span>
+          Envoyer
+        </a>
+        <a class="mobile-dock__item${isActive(["profil.html", "livreur.html"])}" href="${
+          user && !staff ? "profil.html" : accountHref
+        }">
+          <span class="mobile-dock__icon" aria-hidden="true">👤</span>
+          ${user && !staff ? "Profil" : accountLabel}
+        </a>
+        <a class="mobile-dock__item${isActive(["admin.html", "mes-colis.html"])}" href="${
+          staff ? "admin.html" : "mes-colis.html"
+        }">
+          <span class="mobile-dock__icon" aria-hidden="true">${staff ? "⚙️" : "📦"}</span>
+          ${staff ? "Admin" : "Colis"}
+        </a>
+      </div>`;
+    document.body.appendChild(dock);
+    document.body.classList.add("has-mobile-dock");
+  };
+  injectMobileDock();
+
   if (yearEl) {
     yearEl.textContent = String(new Date().getFullYear());
   }
