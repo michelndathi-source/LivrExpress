@@ -476,18 +476,48 @@
                   placeholder="Ex. Médina, près du marché"
                   required
                 />
+                <button type="button" class="btn btn--outline btn--sm loc-gps-btn" id="orderPickupGpsBtn">
+                  📍 Utiliser mon GPS (départ)
+                </button>
+                <p class="field__hint" id="orderPickupGpsHint" hidden></p>
               </div>
 
-              <div class="field field--full">
-                <label class="field__label" for="orderDropoff">Adresse de livraison *</label>
+              <div class="field field--full loc-mode-block">
+                <p class="field__label">Point de livraison *</p>
+                <p class="field__hint">
+                  Par défaut : position GPS du téléphone client. Ou adresse choisie.
+                </p>
+                <div class="loc-mode" role="radiogroup" aria-label="Mode de livraison">
+                  <label class="loc-mode__opt">
+                    <input type="radio" name="deliveryMode" id="deliveryModeGps" value="gps" checked />
+                    <span>
+                      <strong>📍 Ma position GPS</strong>
+                      <small>Localisation du téléphone</small>
+                    </span>
+                  </label>
+                  <label class="loc-mode__opt">
+                    <input type="radio" name="deliveryMode" id="deliveryModeAddress" value="address" />
+                    <span>
+                      <strong>🏠 Adresse choisie</strong>
+                      <small>Saisir une adresse précise</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="field field--full" id="orderDropoffWrap">
+                <label class="field__label" for="orderDropoff">Adresse de livraison</label>
                 <input
                   class="field__input"
                   type="text"
                   id="orderDropoff"
                   name="dropoff"
                   placeholder="Ex. Plateau, rue x"
-                  required
                 />
+                <button type="button" class="btn btn--outline btn--sm loc-gps-btn" id="orderDropoffGpsBtn">
+                  📍 Capturer ma position maintenant
+                </button>
+                <p class="field__hint" id="orderDropoffGpsHint" hidden></p>
               </div>
 
               <div class="field">
@@ -646,6 +676,7 @@
     <script src="js/auth.js"></script>
     <script src="js/livraison.js"></script>
     <script src="js/push-notify.js"></script>
+    <script src="js/geo-live.js"></script>
     <script src="js/profile.js"></script>
     <script src="js/main.js"></script>
   </body>

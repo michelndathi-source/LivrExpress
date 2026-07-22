@@ -698,6 +698,7 @@
     const now = new Date().toISOString();
     const planInfo = PLAN_PRICES[form.plan] || PLAN_PRICES.Express;
 
+    const locations = form.locations || {};
     const request = {
       id,
       userId: user.id,
@@ -713,15 +714,25 @@
       sender: {
         name: form.name || user.name || "",
         phone: form.phone || user.phone || "",
-        address: form.pickup || "",
+        address: form.pickup || locations.pickup?.label || "",
         city: "Dakar",
+        lat: locations.pickup?.lat ?? null,
+        lng: locations.pickup?.lng ?? null,
+        locationSource: locations.pickup?.source || "address",
       },
       recipient: {
         name: form.recipientName || "",
         phone: form.recipientPhone || "",
-        address: form.dropoff || "",
+        address: form.dropoff || locations.delivery?.label || "",
         city: "Dakar",
+        lat: locations.delivery?.lat ?? null,
+        lng: locations.delivery?.lng ?? null,
+        locationSource: locations.delivery?.source || "address",
       },
+      // Modes : gps (téléphone) | address (choisie)
+      deliveryMode: form.deliveryMode || locations.delivery?.source || "address",
+      pickupMode: form.pickupMode || locations.pickup?.source || "address",
+      locations,
       package: {
         type: form.package || "Colis",
         weight: form.weight || "—",
@@ -842,6 +853,25 @@
         reference: trackingId,
       },
       courier: null,
+      // Positions GPS : départ / livraison (client GPS ou adresse) + livreur live
+      locations: {
+        ...(request.locations || {}),
+        pickup: request.locations?.pickup || {
+          label: request.sender?.address,
+          lat: request.sender?.lat,
+          lng: request.sender?.lng,
+          source: request.sender?.locationSource || "address",
+        },
+        delivery: request.locations?.delivery || {
+          label: request.recipient?.address,
+          lat: request.recipient?.lat,
+          lng: request.recipient?.lng,
+          source: request.recipient?.locationSource || "address",
+        },
+        courier: null,
+      },
+      deliveryMode: request.deliveryMode || "address",
+      pickupMode: request.pickupMode || "address",
       eta: eta.toISOString(),
       etaLabel: `${planInfo.etaMin}–${planInfo.etaMax} min`,
       events: [],

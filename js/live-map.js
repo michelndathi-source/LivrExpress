@@ -366,18 +366,65 @@
       this.shipment = shipment;
       if (!this.initMap()) return;
 
-      const senderAddr = shipment.sender?.address || "Plateau, Dakar";
-      const recipAddr = shipment.recipient?.address || "Almadies, Dakar";
+      const Geo = global.LivrExpressGeo;
+      const locs = shipment.locations || {};
+      const live = Geo?.getLiveGps?.(shipment.trackingId) || {};
 
-      const [from, to] = await Promise.all([
-        geocode(senderAddr),
-        geocode(recipAddr),
-      ]);
+      // Départ : GPS enregistré ou adresse
+      const pickupLoc = locs.pickup || live.pickup;
+      const deliveryLoc = locs.delivery || live.delivery;
+
+      let from;
+      let to;
+      if (Geo?.resolvePoint) {
+        [from, to] = await Promise.all([
+          Geo.resolvePoint(pickupLoc, shipment.sender?.address || "Plateau, Dakar"),
+          Geo.resolvePoint(
+            deliveryLoc,
+            shipment.recipient?.address || "Almadies, Dakar"
+          ),
+        ]);
+      } else {
+        const senderAddr = shipment.sender?.address || "Plateau, Dakar";
+        const recipAddr = shipment.recipient?.address || "Almadies, Dakar";
+        [from, to] = await Promise.all([
+          geocode(senderAddr),
+          geocode(recipAddr),
+        ]);
+      }
+
+      // Coords stockées sur sender/recipient
+      if (
+        shipment.sender?.lat != null &&
+        shipment.sender?.lng != null &&
+        !pickupLoc?.lat
+      ) {
+        from = {
+          lat: shipment.sender.lat,
+          lng: shipment.sender.lng,
+          label: shipment.sender.address || from.label,
+          source: shipment.sender.locationSource || "gps",
+        };
+      }
+      if (
+        shipment.recipient?.lat != null &&
+        shipment.recipient?.lng != null &&
+        !deliveryLoc?.lat
+      ) {
+        to = {
+          lat: shipment.recipient.lat,
+          lng: shipment.recipient.lng,
+          label: shipment.recipient.address || to.label,
+          source: shipment.recipient.locationSource || "gps",
+        };
+      }
+
       this.from = from;
       this.to = to;
 
-      // Toujours passer par le hub pour un trajet réaliste Dakar
-      this.path = await fetchRoute(from, to, true);
+      // Itinéraire réel entre départ et livraison (via hub si long trajet)
+      const distKm = haversineKm(from, to);
+      this.path = await fetchRoute(from, to, distKm > 4);
       this._drawStaticLayers();
       this._updateLivePosition(true);
       this.startLive();
@@ -477,19 +524,80 @@
     _updateLivePosition(fit) {
       if (!this.shipment || !this.path.length || !this.markers.courier) return;
 
-      const t = liveProgress(this.shipment);
-      const pos = pointAlongPath(this.path, t);
+      // Priorité : GPS téléphone livreur (service) > simulation sur itinéraire
+      const Geo = global.LivrExpressGeo;
+      const live = Geo?.getLiveGps?.(this.shipment.trackingId);
+      const courierGps =
+        live?.courier ||
+        this.shipment.locations?.courier ||
+        null;
 
-      // petit bruit pour effet GPS live (sauf livré)
-      let lat = pos.lat;
-      let lng = pos.lng;
-      if (this.shipment.statusKey !== "delivered" && this.shipment.statusKey !== "confirmed") {
-        const wobble = Math.sin(Date.now() / 1800) * 0.00012;
-        lat += wobble;
-        lng += Math.cos(Date.now() / 2100) * 0.00012;
+      let lat;
+      let lng;
+      let t = liveProgress(this.shipment);
+      let usingRealGps = false;
+
+      if (
+        courierGps &&
+        typeof courierGps.lat === "number" &&
+        typeof courierGps.lng === "number" &&
+        this.shipment.statusKey !== "confirmed" &&
+        this.shipment.statusKey !== "prepared"
+      ) {
+        lat = courierGps.lat;
+        lng = courierGps.lng;
+        usingRealGps = true;
+        // Estimer progression le long de la route (projection simple)
+        if (this.to) {
+          const total = haversineKm(this.from, this.to) || 1;
+          const remain = haversineKm({ lat, lng }, this.to);
+          t = Math.max(0, Math.min(1, 1 - remain / total));
+        }
+      } else {
+        const pos = pointAlongPath(this.path, t);
+        lat = pos.lat;
+        lng = pos.lng;
+        // léger bruit seulement en simulation
+        if (
+          this.shipment.statusKey !== "delivered" &&
+          this.shipment.statusKey !== "confirmed"
+        ) {
+          const wobble = Math.sin(Date.now() / 1800) * 0.00012;
+          lat += wobble;
+          lng += Math.cos(Date.now() / 2100) * 0.00012;
+        }
       }
 
       this.markers.courier.setLatLng([lat, lng]);
+
+      // Marqueur client (position GPS live optionnelle)
+      const clientGps =
+        live?.client || this.shipment.locations?.clientLive || null;
+      if (
+        clientGps &&
+        typeof clientGps.lat === "number" &&
+        this.map
+      ) {
+        if (!this.markers.client) {
+          this.markers.client = global.L.marker(
+            [clientGps.lat, clientGps.lng],
+            {
+              icon: divIcon(
+                `<span class="lx-marker__pin lx-marker__pin--client">👤</span>`,
+                "lx-marker--client",
+                36
+              ),
+              title: "Position client",
+            }
+          )
+            .addTo(this.map)
+            .bindPopup("<strong>Client</strong><br/>Position GPS téléphone");
+        } else {
+          this.markers.client.setLatLng([clientGps.lat, clientGps.lng]);
+        }
+      }
+
+      this._usingRealGps = usingRealGps;
 
       // portion parcourue
       const traveled = [];
@@ -568,11 +676,13 @@
       const liveBadge = document.getElementById("mapLiveBadge");
 
       if (posEl) {
-        posEl.textContent = detail.live
-          ? `${detail.lat.toFixed(5)}, ${detail.lng.toFixed(5)}`
-          : this.shipment.statusKey === "delivered"
+        const gpsTag = this._usingRealGps ? " · GPS livreur" : "";
+        posEl.textContent =
+          this.shipment.statusKey === "delivered"
             ? "Arrivé à destination"
-            : this.from?.label || "Point d’enlèvement";
+            : detail.live
+              ? `${detail.lat.toFixed(5)}, ${detail.lng.toFixed(5)}${gpsTag}`
+              : this.from?.label || "Point d’enlèvement";
       }
       if (distEl) {
         distEl.textContent =
@@ -620,11 +730,25 @@
 
       if (this.shipment.statusKey === "delivered") return;
 
-      // Recharge le colis (admin avance le statut dans un autre onglet)
-      this.timer = setInterval(() => {
+      // Écoute mises à jour GPS (autre onglet / livreur)
+      this._onGps = () => this._updateLivePosition(false);
+      global.addEventListener("livrexpress:gps", this._onGps);
+      global.addEventListener("storage", this._onGps);
+
+      // Recharge le colis (admin avance le statut / GPS cloud)
+      this.timer = setInterval(async () => {
         const LX = global.LivrExpress;
         if (LX && this.shipment?.trackingId) {
-          const fresh = LX.getShipment(this.shipment.trackingId);
+          let fresh = LX.getShipmentAsync
+            ? await LX.getShipmentAsync(this.shipment.trackingId)
+            : LX.getShipment(this.shipment.trackingId);
+          // fusion GPS local
+          const Geo = global.LivrExpressGeo;
+          const live = Geo?.getLiveGps?.(this.shipment.trackingId);
+          if (fresh && live?.courier) {
+            fresh.locations = fresh.locations || {};
+            fresh.locations.courier = live.courier;
+          }
           if (fresh) {
             const statusChanged = fresh.statusKey !== this._lastStatus;
             this.shipment = fresh;
@@ -639,14 +763,14 @@
           }
         }
         this._updateLivePosition(false);
-      }, 1500);
+      }, 2000);
 
-      // Animation fluide du marqueur (effet GPS)
+      // Rafraîchissement fluide du marqueur
       this.raf = setInterval(() => {
         if (this.shipment && this.shipment.statusKey !== "delivered") {
           this._updateLivePosition(false);
         }
-      }, 700);
+      }, 800);
     }
 
     stopLive() {
@@ -657,6 +781,11 @@
       if (this.timer) {
         clearInterval(this.timer);
         this.timer = null;
+      }
+      if (this._onGps) {
+        global.removeEventListener("livrexpress:gps", this._onGps);
+        global.removeEventListener("storage", this._onGps);
+        this._onGps = null;
       }
     }
 

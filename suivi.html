@@ -158,11 +158,30 @@
                   </div>
                 </div>
               </div>
+              <div class="live-map-gps-bar" id="liveMapGpsBar">
+                <p class="live-map-gps-bar__text">
+                  <strong>GPS téléphone</strong> — le livreur partage la position de son téléphone de service ;
+                  le client peut utiliser sa position ou une adresse choisie.
+                </p>
+                <div class="live-map-gps-bar__actions">
+                  <button type="button" class="btn btn--primary btn--sm" id="courierGpsStartBtn">
+                    🛵 Activer GPS livreur
+                  </button>
+                  <button type="button" class="btn btn--outline btn--sm" id="courierGpsStopBtn" hidden>
+                    Stop GPS livreur
+                  </button>
+                  <button type="button" class="btn btn--outline btn--sm" id="clientGpsShareBtn">
+                    📍 Partager ma position (client)
+                  </button>
+                </div>
+                <p class="field__hint" id="gpsBarStatus" hidden></p>
+              </div>
               <p class="live-map-legend">
                 <span><i class="lx-legend lx-legend--a"></i> Départ</span>
-                <span><i class="lx-legend lx-legend--hub"></i> Hub LivrExpress</span>
-                <span><i class="lx-legend lx-legend--b"></i> Destination</span>
-                <span><i class="lx-legend lx-legend--bike"></i> Colis / livreur live</span>
+                <span><i class="lx-legend lx-legend--hub"></i> Hub</span>
+                <span><i class="lx-legend lx-legend--b"></i> Livraison</span>
+                <span><i class="lx-legend lx-legend--bike"></i> Livreur (GPS tél.)</span>
+                <span><i class="lx-legend lx-legend--client"></i> Client (GPS)</span>
               </p>
             </section>
 
@@ -441,6 +460,7 @@
     <script src="js/auth.js"></script>
     <script src="js/livraison.js"></script>
     <script src="js/push-notify.js"></script>
+    <script src="js/geo-live.js"></script>
     <script src="js/profile.js"></script>
     <script src="js/live-map.js"></script>
     <script src="js/main.js"></script>

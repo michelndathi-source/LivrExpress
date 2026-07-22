@@ -341,8 +341,93 @@
     if (shouldOpen) openOrderModal(planParam || "");
   }
 
+  // État GPS formulaire commande
+  let orderPickupGps = null;
+  let orderDeliveryGps = null;
+
+  const getDeliveryMode = () => {
+    const gps = document.getElementById("deliveryModeGps");
+    if (gps && gps.checked) return "gps";
+    return "address";
+  };
+
+  const syncDeliveryModeUi = () => {
+    const mode = getDeliveryMode();
+    const drop = document.getElementById("orderDropoff");
+    const wrap = document.getElementById("orderDropoffWrap");
+    const gpsBtn = document.getElementById("orderDropoffGpsBtn");
+    if (mode === "gps") {
+      if (drop) {
+        drop.required = false;
+        drop.placeholder = "Optionnel — ou laissez la position GPS";
+      }
+      if (gpsBtn) gpsBtn.hidden = false;
+    } else {
+      if (drop) {
+        drop.required = true;
+        drop.placeholder = "ex. Almadies, villa 12";
+      }
+      if (gpsBtn) gpsBtn.hidden = true;
+    }
+    if (wrap) wrap.dataset.mode = mode;
+  };
+
+  document.getElementById("deliveryModeGps")?.addEventListener("change", syncDeliveryModeUi);
+  document.getElementById("deliveryModeAddress")?.addEventListener("change", syncDeliveryModeUi);
+  syncDeliveryModeUi();
+
+  const bindGpsCapture = (btnId, hintId, which) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener("click", async () => {
+      const Geo = window.LivrExpressGeo;
+      const hint = document.getElementById(hintId);
+      if (!Geo?.captureClientGps) {
+        if (hint) {
+          hint.hidden = false;
+          hint.textContent = "Module GPS indisponible.";
+        }
+        return;
+      }
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = "Localisation…";
+      try {
+        const pos = await Geo.captureClientGps();
+        if (which === "pickup") {
+          orderPickupGps = pos;
+          const el = document.getElementById("orderPickup");
+          if (el) el.value = pos.label || el.value;
+        } else {
+          orderDeliveryGps = pos;
+          const el = document.getElementById("orderDropoff");
+          if (el) el.value = pos.label || "Ma position GPS";
+          const gpsRadio = document.getElementById("deliveryModeGps");
+          if (gpsRadio) {
+            gpsRadio.checked = true;
+            syncDeliveryModeUi();
+          }
+        }
+        if (hint) {
+          hint.hidden = false;
+          hint.textContent = `GPS OK (±${Math.round(pos.accuracy || 0)} m) — ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
+        }
+      } catch (err) {
+        if (hint) {
+          hint.hidden = false;
+          hint.textContent = err.message || "GPS impossible";
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    });
+  };
+  bindGpsCapture("orderPickupGpsBtn", "orderPickupGpsHint", "pickup");
+  bindGpsCapture("orderDropoffGpsBtn", "orderDropoffGpsHint", "delivery");
+
   if (orderForm) {
-    orderForm.addEventListener("submit", (e) => {
+    orderForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       setOrderMessage("", "");
 
@@ -355,6 +440,7 @@
       const packageEl = document.getElementById("orderPackage");
       const weightEl = document.getElementById("orderWeight");
       const notesEl = document.getElementById("orderNotes");
+      const Geo = window.LivrExpressGeo;
 
       const fields = [
         nameEl,
@@ -370,8 +456,8 @@
       const name = nameEl ? nameEl.value.trim() : "";
       const phone = phoneEl ? phoneEl.value.trim() : "";
       const plan = orderPlan ? orderPlan.value : "";
-      const pickup = pickupEl ? pickupEl.value.trim() : "";
-      const dropoff = dropoffEl ? dropoffEl.value.trim() : "";
+      let pickup = pickupEl ? pickupEl.value.trim() : "";
+      let dropoff = dropoffEl ? dropoffEl.value.trim() : "";
       const recipientName = recipientEl ? recipientEl.value.trim() : "";
       const recipientPhone = recipientPhoneEl
         ? recipientPhoneEl.value.trim()
@@ -379,6 +465,8 @@
       const pkg = packageEl ? packageEl.value.trim() : "";
       const weight = weightEl ? weightEl.value.trim() : "";
       const notes = notesEl ? notesEl.value.trim() : "";
+      const deliveryMode = getDeliveryMode();
+      let pickupMode = orderPickupGps ? "gps" : "address";
 
       let valid = true;
       const require = (el, value) => {
@@ -393,7 +481,11 @@
       require(recipientPhoneEl, recipientPhone);
       require(orderPlan, plan);
       require(pickupEl, pickup);
-      require(dropoffEl, dropoff);
+
+      // Livraison : GPS (capturer si besoin) OU adresse obligatoire
+      if (deliveryMode === "address") {
+        require(dropoffEl, dropoff);
+      }
 
       if (!valid) {
         setOrderMessage("Merci de remplir tous les champs obligatoires (*).", "");
@@ -439,33 +531,91 @@
         return;
       }
 
+      const submitBtn = document.getElementById("orderSubmit");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Localisation…";
+      }
+
       try {
+        // Mode GPS livraison : capturer si pas encore fait
+        if (deliveryMode === "gps" && !orderDeliveryGps && Geo?.captureClientGps) {
+          try {
+            orderDeliveryGps = await Geo.captureClientGps();
+            dropoff =
+              orderDeliveryGps.label ||
+              dropoff ||
+              "Position GPS client";
+            if (dropoffEl) dropoffEl.value = dropoff;
+          } catch (gpsErr) {
+            setOrderMessage(
+              (gpsErr.message || "GPS impossible") +
+                " — choisissez « Adresse choisie » ou autorisez la localisation.",
+              ""
+            );
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "Envoyer la demande";
+            }
+            return;
+          }
+        }
+
+        const locations = Geo?.buildLocationsPayload
+          ? Geo.buildLocationsPayload({
+              pickupMode,
+              pickupGps: orderPickupGps,
+              pickupAddress: pickup,
+              deliveryMode,
+              deliveryGps: orderDeliveryGps,
+              deliveryAddress: dropoff,
+            })
+          : {};
+
         const request = LX.createOrderRequest(
           {
             name,
             phone,
             plan,
-            pickup,
-            dropoff,
+            pickup:
+              pickup ||
+              orderPickupGps?.label ||
+              "Point de départ",
+            dropoff:
+              dropoff ||
+              orderDeliveryGps?.label ||
+              "Position GPS client",
             recipientName,
             recipientPhone,
             package: pkg || "Colis",
             weight: weight || "—",
             notes,
+            deliveryMode,
+            pickupMode,
+            locations,
           },
           user
         );
 
         showOrderSuccessView(request);
         orderForm.reset();
+        orderPickupGps = null;
+        orderDeliveryGps = null;
         if (orderPlan && plan) orderPlan.value = plan;
+        const gpsRadio = document.getElementById("deliveryModeGps");
+        if (gpsRadio) gpsRadio.checked = true;
+        syncDeliveryModeUi();
 
-        // Rafraîchir l’espace client si présent
         if (typeof window.__refreshClientDash === "function") {
           window.__refreshClientDash();
         }
       } catch (err) {
         setOrderMessage(err.message || "Erreur lors de l’envoi.", "");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Envoyer la demande";
+        }
       }
     });
   }
@@ -740,6 +890,73 @@
       }
     };
 
+    const bindGpsControls = (shipment) => {
+      const Geo = window.LivrExpressGeo;
+      const statusEl = document.getElementById("gpsBarStatus");
+      const setStatus = (msg, show = true) => {
+        if (!statusEl) return;
+        statusEl.hidden = !show;
+        statusEl.textContent = msg || "";
+      };
+      const startBtn = document.getElementById("courierGpsStartBtn");
+      const stopBtn = document.getElementById("courierGpsStopBtn");
+      const clientBtn = document.getElementById("clientGpsShareBtn");
+      if (!shipment || !Geo) return;
+
+      const tid = shipment.trackingId;
+      const syncBtns = () => {
+        const on = Geo.isCourierTracking?.(tid);
+        if (startBtn) startBtn.hidden = Boolean(on);
+        if (stopBtn) stopBtn.hidden = !on;
+      };
+      syncBtns();
+
+      if (startBtn) {
+        startBtn.onclick = () => {
+          const res = Geo.startCourierTracking(tid, (pos, err) => {
+            if (err) {
+              setStatus(err.message || "GPS livreur erreur");
+              return;
+            }
+            if (pos) {
+              setStatus(
+                `GPS livreur actif · ±${Math.round(pos.accuracy || 0)} m · ${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`
+              );
+              window.LivrExpressMap?.getTracker?.()?.refresh(
+                LX.getShipment(tid)
+              );
+            }
+          });
+          if (!res.ok) setStatus(res.error || "Impossible d’activer le GPS");
+          else setStatus("GPS livreur activé — partage de la position du téléphone de service…");
+          syncBtns();
+        };
+      }
+      if (stopBtn) {
+        stopBtn.onclick = () => {
+          Geo.stopCourierTracking(tid);
+          setStatus("GPS livreur arrêté.");
+          syncBtns();
+        };
+      }
+      if (clientBtn) {
+        clientBtn.onclick = () => {
+          const res = Geo.startClientTracking(tid, (pos) => {
+            if (pos) {
+              setStatus(
+                `Position client partagée · ±${Math.round(pos.accuracy || 0)} m`
+              );
+              window.LivrExpressMap?.getTracker?.()?.refresh(
+                LX.getShipment(tid)
+              );
+            }
+          });
+          if (!res.ok) setStatus(res.error || "GPS client impossible");
+          else setStatus("Partage de votre position client en cours…");
+        };
+      }
+    };
+
     const showResult = (shipment) => {
       showError("");
       if (trackEmpty) trackEmpty.hidden = true;
@@ -749,8 +966,9 @@
       const url = new URL(window.location.href);
       url.searchParams.set("id", shipment.trackingId);
       window.history.replaceState({}, "", url);
-      // Carte Maps + avancement live
+      // Carte Maps + avancement live + contrôles GPS
       mountLiveMap(shipment);
+      bindGpsControls(shipment);
     };
 
     // Stats carte → barre de progression visuelle
@@ -2192,15 +2410,14 @@
       if (advance) {
         const tid = advance.getAttribute("data-advance");
         const updated = LX.advanceShipment(tid);
+        // Pas d’alert() bloquant : la liste se rafraîchit avec le nouveau statut
         if (updated) {
           const meta = LX.getStatusMeta?.(updated.statusKey);
           const label = meta?.badge || updated.statusKey;
-          if (updated.userId) {
-            // Feedback ops : le client est notifié à chaque statut
-            alert(
-              `Statut mis à jour : ${label}\n\nLe client a reçu une notification sur l’évolution du colis ${updated.trackingId}.`
-            );
-          }
+          console.info(
+            `[LivrExpress] ${updated.trackingId} → ${label}` +
+              (updated.userId ? " (client notifié)" : "")
+          );
         }
         refreshAdmin();
         return;
