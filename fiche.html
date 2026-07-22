@@ -62,7 +62,7 @@
             </h1>
             <p class="track-page__subtitle">
               Document de transport LivrExpress : n° de suivi, parties, colis,
-              pipeline de livraison et historique scanné.
+              pipeline de livraison et détails de la course.
             </p>
           </div>
 
@@ -165,29 +165,24 @@
               <ol class="stepper stepper--6" id="ficheStepper" aria-label="Étapes de livraison"></ol>
             </section>
 
-            <section class="waybill__box waybill__box--full">
-              <h2 class="waybill__box-title">Historique des scans (events)</h2>
-              <ol class="track-timeline" id="ficheTimeline"></ol>
-            </section>
-
             <footer class="waybill__footer">
               <p>
                 LivrExpress · Plateau, Dakar · +221 77 000 00 00 · contact@livrexpress.sn
               </p>
               <p class="waybill__footer-note">
-                Conservez ce document. Scannez le n° de suivi sur
-                <strong>livrexpress</strong> pour le suivi temps réel.
+                Conservez ce document. Suivez le colis en temps réel avec le n° de suivi
+                sur <strong>LivrExpress</strong>.
               </p>
             </footer>
           </article>
 
           <div class="fiche-actions no-print" id="ficheActions">
             <a href="suivi.html" class="btn btn--primary" id="ficheTrackLink">Ouvrir le suivi live</a>
-            <button type="button" class="btn btn--outline" id="fichePrintBtn">Imprimer la fiche</button>
-            <button type="button" class="btn btn--ghost" id="ficheAdvanceBtn">
-              Simuler étape suivante
+            <button type="button" class="btn btn--primary" id="fichePdfBtn">
+              Télécharger en PDF
             </button>
-            <a href="mes-colis.html" class="btn btn--ghost">Tous les n°</a>
+            <button type="button" class="btn btn--outline" id="fichePrintBtn">Imprimer</button>
+            <a href="mes-colis.html" class="btn btn--ghost">Mes colis</a>
           </div>
         </div>
       </section>

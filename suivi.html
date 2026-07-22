@@ -84,7 +84,7 @@
                   id="trackInput"
                   name="tracking"
                   class="track-search__input"
-                  placeholder="LX-260720-A3F9 ou LX-2847"
+                  placeholder="Ex. LX-260720-A3F9"
                   autocomplete="off"
                   spellcheck="false"
                   required
@@ -96,12 +96,10 @@
               </button>
             </div>
             <p class="track-search__hint" id="trackHint">
-              Démos&nbsp;:
-              <button type="button" class="track-search__demo" data-demo="LX-5510">LX-5510</button> préparé
-              · <button type="button" class="track-search__demo" data-demo="LX-3301">LX-3301</button> enlevé
-              · <button type="button" class="track-search__demo" data-demo="LX-2847">LX-2847</button> livraison
-              · <button type="button" class="track-search__demo" data-demo="LX-1092">LX-1092</button> remis
-              · <a href="mes-colis.html">Tous mes n°</a>
+              Entrez le n° reçu après validation de votre commande.
+              <a href="mes-colis.html">Mes colis</a>
+              ·
+              <a href="espace-client.html">Mon espace</a>
             </p>
             <p class="track-search__error" id="trackError" role="alert" hidden></p>
           </form>
@@ -202,7 +200,7 @@
                     <div class="track__icon" id="resultIcon">📦</div>
                     <div>
                       <p class="track__label" id="resultLabel">Colis en cours</p>
-                      <p class="track__id" id="resultId">#LX-2847</p>
+                      <p class="track__id" id="resultId">#—</p>
                     </div>
                     <span class="track__status" id="resultStatus">En route</span>
                   </div>
@@ -255,8 +253,8 @@
                     <a href="fiche.html" class="btn btn--outline btn--sm" id="resultFicheLink" hidden>
                       Fiche de suivi
                     </a>
-                    <button type="button" class="btn btn--ghost btn--sm" id="advanceStatusBtn" hidden>
-                      Simuler étape suivante
+                    <button type="button" class="btn btn--primary btn--sm" id="resultPdfBtn" hidden>
+                      Télécharger PDF
                     </button>
                   </div>
                 </div>
@@ -316,13 +314,6 @@
                       </a>
                     </div>
                   </div>
-                </div>
-
-                <div class="track-panel">
-                  <h2 class="track-panel__title">Historique des scans</h2>
-                  <ol class="track-timeline" id="resultTimeline">
-                    <!-- filled by JS -->
-                  </ol>
                 </div>
 
                 <div class="track-panel track-panel--meta">

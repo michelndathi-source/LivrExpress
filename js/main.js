@@ -818,37 +818,42 @@
       ficheLink.hidden = false;
     }
 
-    const advanceBtn = document.getElementById("advanceStatusBtn");
-    if (advanceBtn) {
-      advanceBtn.hidden = s.statusKey === "delivered";
-      advanceBtn.dataset.trackingId = s.trackingId;
+    const pdfBtn = document.getElementById("resultPdfBtn");
+    if (pdfBtn) {
+      pdfBtn.hidden = false;
+      pdfBtn.onclick = () => {
+        window.location.href = `fiche.html?id=${encodeURIComponent(
+          s.trackingId
+        )}&pdf=1`;
+      };
     }
-
-    renderTimeline(document.getElementById("resultTimeline"), vm.timeline);
   };
 
-  // Hero card
+  // Hero card — pipeline générique (pas de colis démo)
   const heroStepper = document.getElementById("heroStepper");
   if (heroStepper && LX) {
-    LX.seedDemosIfNeeded();
-    const shipment = LX.getShipment("LX-2847");
-    const vm = LX.viewModel(shipment);
-    if (vm) {
-      applyStepper(heroStepper, vm.steps, { showTimes: false, compact: true });
-      const heroProgress = document.getElementById("heroProgress");
-      const heroStatus = document.getElementById("heroStatus");
-      const heroGuide = document.getElementById("heroGuide");
-      if (heroProgress) {
-        heroProgress.style.width = `${vm.progress}%`;
-        heroProgress.classList.add("is-static");
-        heroProgress.setAttribute("aria-valuenow", String(vm.progress));
-      }
-      if (heroStatus) {
-        heroStatus.textContent = vm.badge;
-        heroStatus.className = "track__status";
-        if (vm.statusClass) heroStatus.classList.add(vm.statusClass);
-      }
-      if (heroGuide) heroGuide.textContent = vm.guide;
+    const fakeShip = {
+      statusKey: "delivery",
+      stepTimes: {},
+      events: [],
+    };
+    const steps = LX.resolveSteps(fakeShip);
+    applyStepper(heroStepper, steps, { showTimes: false, compact: true });
+    const heroProgress = document.getElementById("heroProgress");
+    const heroStatus = document.getElementById("heroStatus");
+    const heroGuide = document.getElementById("heroGuide");
+    if (heroProgress) {
+      heroProgress.style.width = "78%";
+      heroProgress.classList.add("is-static");
+      heroProgress.setAttribute("aria-valuenow", "78");
+    }
+    if (heroStatus) {
+      heroStatus.textContent = "En route";
+      heroStatus.className = "track__status";
+    }
+    if (heroGuide) {
+      heroGuide.textContent =
+        "Suivez votre colis en temps réel avec le n° reçu après validation.";
     }
   }
 
@@ -1016,34 +1021,7 @@
       lookup(trackInput ? trackInput.value : "");
     });
 
-    document.querySelectorAll("[data-demo]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.getAttribute("data-demo");
-        if (trackInput) trackInput.value = id || "";
-        lookup(id);
-      });
-    });
-
-    const advanceBtn = document.getElementById("advanceStatusBtn");
-    if (advanceBtn) {
-      advanceBtn.addEventListener("click", () => {
-        const id = advanceBtn.dataset.trackingId;
-        if (!id) return;
-        const updated = LX.advanceShipment(id);
-        if (updated) {
-          fillTrackingCard(LX.viewModel(updated));
-          // Met à jour la position live sans détruire la carte
-          const tracker = window.LivrExpressMap?.getTracker?.();
-          if (tracker) {
-            tracker.refresh(updated);
-          } else {
-            mountLiveMap(updated);
-          }
-        }
-      });
-    }
-
-    // Poll léger : si admin avance le statut ailleurs, la carte + fiche se mettent à jour
+    // Poll léger : si le statut change (admin / ops), la carte + fiche se mettent à jour
     setInterval(() => {
       if (!trackResult || trackResult.hidden || !trackInput?.value) return;
       const fresh = LX.getShipment(trackInput.value);
@@ -1163,25 +1141,32 @@
         progressEl.classList.add("is-static");
       }
 
-      renderTimeline(document.getElementById("ficheTimeline"), vm.timeline);
-
       const trackLink = document.getElementById("ficheTrackLink");
       if (trackLink) {
         trackLink.href = `suivi.html?id=${encodeURIComponent(shipment.trackingId)}`;
       }
 
-      const advanceBtn = document.getElementById("ficheAdvanceBtn");
-      if (advanceBtn) {
-        advanceBtn.hidden = shipment.statusKey === "delivered";
-        advanceBtn.onclick = () => {
-          const updated = LX.advanceShipment(shipment.trackingId);
-          if (updated) renderFiche(updated);
-        };
-      }
-
       const printBtn = document.getElementById("fichePrintBtn");
       if (printBtn) {
         printBtn.onclick = () => window.print();
+      }
+
+      const pdfBtn = document.getElementById("fichePdfBtn");
+      if (pdfBtn) {
+        pdfBtn.onclick = () => {
+          // Ouvre le dialogue d’impression → « Enregistrer au format PDF »
+          document.title = `Fiche-${shipment.trackingId}-LivrExpress`;
+          window.print();
+        };
+      }
+
+      // ?pdf=1 depuis le suivi → téléchargement auto
+      const autoPdf = new URLSearchParams(window.location.search).get("pdf");
+      if (autoPdf === "1") {
+        setTimeout(() => {
+          document.title = `Fiche-${shipment.trackingId}-LivrExpress`;
+          window.print();
+        }, 450);
       }
     }
   }
@@ -1197,7 +1182,7 @@
       window.location.href = "login.html?next=espace-client.html";
     } else {
       // admin : voir tout
-      LX.seedDemosIfNeeded();
+      if (LX.seedDemosIfNeeded) LX.seedDemosIfNeeded(); // purge démos en mode live
       const shipments = LX.listShipments().filter((s) => s.source !== "demo");
       const empty = document.getElementById("shipmentsEmpty");
       if (!shipments.length) {
@@ -2123,7 +2108,7 @@
                       ? `<div class="dash-card__actions">
                           <a class="btn btn--primary btn--sm" href="suivi.html?id=${encodeURIComponent(o.trackingId)}">Suivi</a>
                           <a class="btn btn--outline btn--sm" href="fiche.html?id=${encodeURIComponent(o.trackingId)}">Fiche</a>
-                          <button type="button" class="btn btn--ghost btn--sm" data-advance="${o.trackingId}">Étape suivante</button>
+                          <button type="button" class="btn btn--ghost btn--sm" data-advance="${o.trackingId}">Mettre à jour le statut</button>
                         </div>`
                       : ""
                 }
@@ -2160,7 +2145,7 @@
                   <a class="btn btn--outline btn--sm" href="fiche.html?id=${encodeURIComponent(s.trackingId)}">Fiche</a>
                   ${
                     s.statusKey !== "delivered"
-                      ? `<button type="button" class="btn btn--primary btn--sm" data-advance="${s.trackingId}">Avancer statut</button>`
+                      ? `<button type="button" class="btn btn--primary btn--sm" data-advance="${s.trackingId}">Mettre à jour le statut</button>`
                       : ""
                   }
                 </div>

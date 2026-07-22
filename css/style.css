@@ -3662,27 +3662,38 @@ body.modal-open {
   margin-bottom: 2rem;
 }
 
+/* PDF / impression fiche */
 @media print {
   .no-print,
+  .mobile-dock,
   .header,
   .footer,
+  .fiche-actions,
+  .nav-toggle,
+  .toast-stack,
   .track-page__bg,
-  .track-page__intro,
-  .fiche-actions {
+  .track-page__intro {
     display: none !important;
   }
 
   body {
-    background: white;
+    background: #fff !important;
+    padding: 0 !important;
   }
 
   .track-page {
     padding: 0;
   }
 
-  .waybill {
-    box-shadow: none;
-    border: 1px solid #ccc;
+  .waybill,
+  .track-card,
+  .hero-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  @page {
+    margin: 12mm;
   }
 }
 

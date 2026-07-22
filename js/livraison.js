@@ -216,18 +216,10 @@
     if (!trackingId) return null;
     const id = normalizeTrackingId(trackingId);
     const map = readAll();
-    if (map[id]) return map[id];
-    // demos seedées à la demande
-    const demos = getDemoShipments();
-    if (demos[id]) {
-      // ne pas écraser une vraie commande
-      if (!map[id]) {
-        map[id] = demos[id];
-        writeAll(map);
-      }
-      return map[id] || demos[id];
-    }
-    return null;
+    const ship = map[id] || null;
+    // Mode live : ignorer les anciennes démos
+    if (ship && ship.source === "demo") return null;
+    return ship;
   };
 
   /** Charge un colis depuis Supabase puis met en cache local */
@@ -1225,14 +1217,13 @@
     return demos;
   };
 
+  /** Mode live : purge des colis de démo du stockage local */
   const seedDemosIfNeeded = () => {
     const map = readAll();
-    const demos = getDemoShipments();
     let changed = false;
-    Object.keys(demos).forEach((id) => {
-      // Toujours rafraîchir les démos pour cohérence (sauf si source order)
-      if (!map[id] || map[id].source === "demo") {
-        map[id] = demos[id];
+    Object.keys(map).forEach((id) => {
+      if (map[id] && map[id].source === "demo") {
+        delete map[id];
         changed = true;
       }
     });
