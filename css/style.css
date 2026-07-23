@@ -4652,6 +4652,19 @@ body.modal-open {
   margin-top: 0.15rem;
 }
 
+.loc-coords {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .loc-coords {
+    grid-template-columns: 1fr;
+  }
+}
+
 .loc-gps-btn {
   margin-top: 0.45rem;
 }

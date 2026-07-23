@@ -488,12 +488,7 @@
         : document.getElementById(id);
       if (el && val != null && val !== "") {
         // toujours préremplir les champs expéditeur depuis le profil
-        if (
-          id === "orderName" ||
-          id === "orderPhone" ||
-          id === "orderPickup" ||
-          id === "orderPlan"
-        ) {
+        if (id === "orderName" || id === "orderPhone" || id === "orderPlan") {
           el.value = val;
         } else if (!el.value) {
           el.value = val;
@@ -502,10 +497,7 @@
     };
     set("orderName", profile.name);
     set("orderPhone", profile.phone);
-    set(
-      "orderPickup",
-      profile.preferredPickup || profile.address || ""
-    );
+    // Départ = GPS auto du téléphone client (ne pas écraser avec l’adresse profil)
     set("orderPlan", profile.defaultPlan || "Express");
     // hint destinataire zone habituelle
     const drop = document.getElementById("orderDropoff");

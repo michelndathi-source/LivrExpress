@@ -370,53 +370,76 @@
       const locs = shipment.locations || {};
       const live = Geo?.getLiveGps?.(shipment.trackingId) || {};
 
-      // Départ : GPS enregistré ou adresse
-      const pickupLoc = locs.pickup || live.pickup;
-      const deliveryLoc = locs.delivery || live.delivery;
+      // Départ / arrivée : priorité coords GPS (commande) pour le trajet live
+      const pickupLoc = locs.pickup || live.pickup || null;
+      const deliveryLoc = locs.delivery || live.delivery || null;
 
-      let from;
-      let to;
-      if (Geo?.resolvePoint) {
-        [from, to] = await Promise.all([
-          Geo.resolvePoint(pickupLoc, shipment.sender?.address || "Plateau, Dakar"),
-          Geo.resolvePoint(
-            deliveryLoc,
-            shipment.recipient?.address || "Almadies, Dakar"
-          ),
-        ]);
-      } else {
-        const senderAddr = shipment.sender?.address || "Plateau, Dakar";
-        const recipAddr = shipment.recipient?.address || "Almadies, Dakar";
-        [from, to] = await Promise.all([
-          geocode(senderAddr),
-          geocode(recipAddr),
-        ]);
-      }
+      const pointFromStored = (loc, person, fallbackLabel) => {
+        if (loc && typeof loc.lat === "number" && typeof loc.lng === "number") {
+          return {
+            lat: loc.lat,
+            lng: loc.lng,
+            label: loc.label || person?.address || fallbackLabel,
+            source: loc.source || "gps",
+          };
+        }
+        if (
+          person &&
+          typeof person.lat === "number" &&
+          typeof person.lng === "number"
+        ) {
+          return {
+            lat: person.lat,
+            lng: person.lng,
+            label: person.address || loc?.label || fallbackLabel,
+            source: person.locationSource || "gps",
+          };
+        }
+        return null;
+      };
 
-      // Coords stockées sur sender/recipient
-      if (
-        shipment.sender?.lat != null &&
-        shipment.sender?.lng != null &&
-        !pickupLoc?.lat
-      ) {
-        from = {
-          lat: shipment.sender.lat,
-          lng: shipment.sender.lng,
-          label: shipment.sender.address || from.label,
-          source: shipment.sender.locationSource || "gps",
-        };
-      }
-      if (
-        shipment.recipient?.lat != null &&
-        shipment.recipient?.lng != null &&
-        !deliveryLoc?.lat
-      ) {
-        to = {
-          lat: shipment.recipient.lat,
-          lng: shipment.recipient.lng,
-          label: shipment.recipient.address || to.label,
-          source: shipment.recipient.locationSource || "gps",
-        };
+      let from = pointFromStored(
+        pickupLoc,
+        shipment.sender,
+        shipment.sender?.address || "Départ"
+      );
+      let to = pointFromStored(
+        deliveryLoc,
+        shipment.recipient,
+        shipment.recipient?.address || "Livraison"
+      );
+
+      // Fallback géocodage adresse si pas de coords GPS
+      if (!from || !to) {
+        if (Geo?.resolvePoint) {
+          const [fromR, toR] = await Promise.all([
+            from
+              ? Promise.resolve(from)
+              : Geo.resolvePoint(
+                  pickupLoc,
+                  shipment.sender?.address || "Plateau, Dakar"
+                ),
+            to
+              ? Promise.resolve(to)
+              : Geo.resolvePoint(
+                  deliveryLoc,
+                  shipment.recipient?.address || "Almadies, Dakar"
+                ),
+          ]);
+          from = from || fromR;
+          to = to || toR;
+        } else {
+          if (!from) {
+            from = await geocode(
+              shipment.sender?.address || "Plateau, Dakar"
+            );
+          }
+          if (!to) {
+            to = await geocode(
+              shipment.recipient?.address || "Almadies, Dakar"
+            );
+          }
+        }
       }
 
       this.from = from;

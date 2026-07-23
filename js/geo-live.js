@@ -282,6 +282,8 @@
 
   /**
    * Construit l’objet locations pour une commande
+   * - Départ : GPS téléphone client commandeur (lat/lng obligatoires pour le trajet live)
+   * - Livraison : adresse + GPS collecté / fourni par le destinataire
    */
   const buildLocationsPayload = ({
     pickupMode, // 'gps' | 'address'
@@ -292,14 +294,20 @@
     deliveryAddress,
   }) => {
     const locations = {};
-    if (pickupMode === "gps" && pickupGps) {
+    const hasCoords = (p) =>
+      p && typeof p.lat === "number" && typeof p.lng === "number";
+
+    if (hasCoords(pickupGps)) {
       locations.pickup = {
         lat: pickupGps.lat,
         lng: pickupGps.lng,
-        accuracy: pickupGps.accuracy,
-        label: pickupGps.label || "Position GPS départ",
-        source: "gps",
-        at: pickupGps.at,
+        accuracy: pickupGps.accuracy ?? null,
+        label:
+          pickupAddress ||
+          pickupGps.label ||
+          "Position GPS départ (client)",
+        source: pickupGps.source || "gps",
+        at: pickupGps.at || new Date().toISOString(),
       };
     } else if (pickupAddress) {
       locations.pickup = {
@@ -307,14 +315,18 @@
         source: "address",
       };
     }
-    if (deliveryMode === "gps" && deliveryGps) {
+
+    if (hasCoords(deliveryGps)) {
       locations.delivery = {
         lat: deliveryGps.lat,
         lng: deliveryGps.lng,
-        accuracy: deliveryGps.accuracy,
-        label: deliveryGps.label || "Position GPS client",
-        source: "gps",
-        at: deliveryGps.at,
+        accuracy: deliveryGps.accuracy ?? null,
+        label:
+          deliveryAddress ||
+          deliveryGps.label ||
+          "Point de livraison GPS",
+        source: deliveryGps.source || deliveryMode || "gps",
+        at: deliveryGps.at || new Date().toISOString(),
       };
     } else if (deliveryAddress) {
       locations.delivery = {

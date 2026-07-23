@@ -304,43 +304,67 @@
                 </select>
               </div>
               <div class="field field--full">
-                <label class="field__label" for="orderPickup">Adresse de départ *</label>
-                <input class="field__input" type="text" id="orderPickup" required />
+                <label class="field__label" for="orderPickup">Adresse de départ (GPS client) *</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderPickup"
+                  required
+                  readonly
+                  placeholder="Position GPS du téléphone… (activez la localisation)"
+                />
+                <p class="field__hint">
+                  Remplie <strong>automatiquement</strong> par le GPS du téléphone du client qui commande —
+                  c’est le point de départ du colis. La localisation doit être activée.
+                </p>
                 <button type="button" class="btn btn--outline btn--sm loc-gps-btn" id="orderPickupGpsBtn">
-                  📍 Utiliser mon GPS (départ)
+                  📍 Actualiser mon GPS départ
                 </button>
                 <p class="field__hint" id="orderPickupGpsHint" hidden></p>
               </div>
 
-              <div class="field field--full loc-mode-block">
-                <p class="field__label">Point de livraison *</p>
-                <p class="field__hint">
-                  Par défaut : position GPS du téléphone client. Ou choisissez une adresse précise.
-                </p>
-                <div class="loc-mode" role="radiogroup" aria-label="Mode de livraison">
-                  <label class="loc-mode__opt">
-                    <input type="radio" name="deliveryMode" id="deliveryModeGps" value="gps" checked />
-                    <span>
-                      <strong>📍 Ma position GPS</strong>
-                      <small>Localisation du téléphone (précision live)</small>
-                    </span>
-                  </label>
-                  <label class="loc-mode__opt">
-                    <input type="radio" name="deliveryMode" id="deliveryModeAddress" value="address" />
-                    <span>
-                      <strong>🏠 Adresse choisie</strong>
-                      <small>Saisir une adresse de livraison précise</small>
-                    </span>
-                  </label>
-                </div>
-              </div>
               <div class="field field--full" id="orderDropoffWrap">
-                <label class="field__label" for="orderDropoff">Adresse de livraison</label>
-                <input class="field__input" type="text" id="orderDropoff" placeholder="ex. Almadies, villa 12" />
+                <label class="field__label" for="orderDropoff">Adresse du point de livraison *</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  id="orderDropoff"
+                  required
+                  placeholder="ex. Almadies, villa 12 — ou adresse fournie par le destinataire"
+                />
+                <p class="field__hint">
+                  Saisissez l’adresse d’arrivée, puis capturez les <strong>coordonnées GPS</strong> du lieu
+                  (sur place, ou position partagée par le destinataire) pour tracer le trajet
+                  <strong>départ → arrivée</strong> sur le suivi live.
+                </p>
                 <button type="button" class="btn btn--outline btn--sm loc-gps-btn" id="orderDropoffGpsBtn">
-                  📍 Capturer ma position maintenant
+                  📍 Capturer GPS point de livraison
                 </button>
                 <p class="field__hint" id="orderDropoffGpsHint" hidden></p>
+                <div class="loc-coords" aria-label="Coordonnées GPS livraison">
+                  <div class="field">
+                    <label class="field__label" for="orderDropoffLat">Latitude livraison *</label>
+                    <input
+                      class="field__input"
+                      type="text"
+                      inputmode="decimal"
+                      id="orderDropoffLat"
+                      placeholder="ex. 14.73950"
+                      autocomplete="off"
+                    />
+                  </div>
+                  <div class="field">
+                    <label class="field__label" for="orderDropoffLng">Longitude livraison *</label>
+                    <input
+                      class="field__input"
+                      type="text"
+                      inputmode="decimal"
+                      id="orderDropoffLng"
+                      placeholder="ex. -17.52560"
+                      autocomplete="off"
+                    />
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label class="field__label" for="orderPackage">Type de colis</label>
