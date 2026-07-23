@@ -257,6 +257,8 @@ body.pwa-standalone .header {
   order: 3;
 }
 
+/* Même position logo / burger sur TOUTES les pages
+   (order explicite : sans ça le burger a order:0 et passe à gauche du logo) */
 .header .logo {
   order: 1;
   flex-shrink: 0;
@@ -264,6 +266,13 @@ body.pwa-standalone .header {
 
 .header .nav {
   order: 2;
+}
+
+/* Burger hors de .header__end (pages sans cloche) : même place qu’espace-client */
+.header__inner > .nav-toggle {
+  order: 3;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .logo {

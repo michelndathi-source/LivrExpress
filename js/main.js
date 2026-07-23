@@ -1417,7 +1417,6 @@
       const statusEl = document.getElementById("pushBannerStatus");
       const enableBtn = document.getElementById("pushEnableBtn");
       const testBtn = document.getElementById("pushTestBtn");
-      const ntfyLink = document.getElementById("pushNtfyLink");
       const dismissBtn = document.getElementById("pushDismissBtn");
 
       pushBanner.hidden = false;
@@ -1432,7 +1431,6 @@
         }
         if (enableBtn) enableBtn.hidden = true;
         if (testBtn) testBtn.hidden = true;
-        if (ntfyLink) ntfyLink.hidden = true;
         if (statusEl) statusEl.hidden = true;
         return;
       }
@@ -1442,23 +1440,21 @@
         if (titleEl) titleEl.textContent = "Alertes téléphone activées";
         if (textEl) {
           textEl.innerHTML =
-            "À chaque statut de colis, votre téléphone affiche une notification avec la <strong>sonnerie système</strong>. Pour les recevoir même site fermé, ouvrez aussi « Alertes hors site » une fois (abonnement gratuit).";
+            "À chaque statut de colis, votre téléphone affiche une notification avec la <strong>sonnerie système</strong> — y compris quand l’app est en <strong>arrière-plan</strong>.";
         }
         if (enableBtn) {
           enableBtn.hidden = true;
         }
         if (testBtn) testBtn.hidden = false;
-        if (ntfyLink && st.topic) {
-          ntfyLink.hidden = false;
-          ntfyLink.href = `https://ntfy.sh/${encodeURIComponent(st.topic)}`;
-          ntfyLink.textContent = "Alertes hors site";
-        }
         if (statusEl) {
           statusEl.hidden = false;
-          statusEl.textContent = "Statut : autorisé · sonnerie du téléphone active";
+          statusEl.textContent =
+            "Statut : autorisé · écoute en arrière-plan active";
         }
         if (dismissBtn) dismissBtn.textContent = "Masquer";
         if (dismissed) pushBanner.hidden = true;
+        // Relance l’écoute arrière-plan (SW) si déjà activé
+        Push.startBackgroundAlerts?.(user.id);
         return;
       }
 
@@ -1474,7 +1470,6 @@
           enableBtn.textContent = "Réessayer";
         }
         if (testBtn) testBtn.hidden = true;
-        if (ntfyLink) ntfyLink.hidden = true;
         return;
       }
 
@@ -1486,14 +1481,13 @@
       if (titleEl) titleEl.textContent = "Activez les alertes sur votre téléphone";
       if (textEl) {
         textEl.innerHTML =
-          "À chaque changement de statut de colis, votre téléphone affiche une notification avec la <strong>sonnerie de notification</strong> de votre appareil — même si vous quittez le site.";
+          "À chaque changement de statut de colis, votre téléphone affiche une notification avec la <strong>sonnerie de notification</strong> — même si l’app est en arrière-plan.";
       }
       if (enableBtn) {
         enableBtn.hidden = false;
         enableBtn.textContent = "Activer les notifications";
       }
       if (testBtn) testBtn.hidden = true;
-      if (ntfyLink) ntfyLink.hidden = true;
       if (statusEl) statusEl.hidden = true;
     };
 
@@ -1512,13 +1506,7 @@
         return;
       }
       sessionStorage.removeItem(PUSH_DISMISS_KEY);
-      // Abonnement hors-site (ntfy) : ouvre le canal d’alertes téléphone
-      if (res.ntfyUrl) {
-        const go = confirm(
-          "Notifications activées !\n\nPour recevoir les alertes même si le site est complètement fermé, abonnez-vous au canal d’alertes (gratuit).\n\nOuvrir le canal maintenant ?"
-        );
-        if (go) window.open(res.ntfyUrl, "_blank", "noopener");
-      }
+      // Pas de popup « canal d’alertes » : l’écoute arrière-plan démarre toute seule
       refreshPushBanner();
     });
 
@@ -1533,10 +1521,10 @@
         icon: "🔔",
         renotify: true,
       });
-      // Test pont hors-site aussi
+      // Test aussi le chemin arrière-plan (pont → SW)
       await Push.sendPhoneBridge?.(user.id, {
-        title: "Test LivrExpress",
-        message: "Alerte hors site OK — vous recevrez les statuts de colis ici aussi.",
+        title: "Test LivrExpress (arrière-plan)",
+        message: "Alerte reçue même hors écran de l’app.",
       });
     });
 
@@ -3690,7 +3678,7 @@
     }
   }
 
-  // Splash uniquement sur la page de connexion (avant login)
+  // Splash sur la page de connexion (avant login) — se rejoue à chaque visite
   const pageName = (
     window.location.pathname.split("/").pop() || ""
   ).toLowerCase();

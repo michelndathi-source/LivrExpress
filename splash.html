@@ -75,7 +75,7 @@
     <script src="js/auth.js"></script>
     <script>
       (function () {
-        // Se relance à chaque actualisation (pas de cache session)
+        // Se relance à chaque visite / actualisation de splash.html
         const goNext = () => {
           const Auth = window.Auth;
           const user = Auth && Auth.getCurrentUser ? Auth.getCurrentUser() : null;

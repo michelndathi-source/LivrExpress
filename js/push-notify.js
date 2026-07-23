@@ -1,11 +1,18 @@
 /**
  * LivrExpress — Notifications téléphone (sonnerie système)
  * - Service Worker + Notification API (bannière + son OS)
- * - Pont ntfy.sh pour recevoir l’alerte même si le site est fermé
+ * - Écoute arrière-plan automatique (flux ntfy via le SW, sans abonnement manuel)
+ * - Pont ntfy pour délivrer l’alerte même hors écran de l’app
  */
 (function (global) {
   const PREF_KEY = "livrexpress_push_prefs_v1";
   const TOPICS_KEY = "livrexpress_push_topics_v1";
+  const ACTIVE_USER_KEY = "livrexpress_push_active_user_v1";
+
+  let pageStream = null;
+  let pageStreamTopic = null;
+  let pageStreamUserId = null;
+  let reconnectTimer = null;
 
   const readPrefs = () => {
     try {
@@ -39,6 +46,23 @@
     }
   };
 
+  const setActiveUser = (userId) => {
+    try {
+      if (userId) localStorage.setItem(ACTIVE_USER_KEY, String(userId));
+      else localStorage.removeItem(ACTIVE_USER_KEY);
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  const getActiveUser = () => {
+    try {
+      return localStorage.getItem(ACTIVE_USER_KEY) || null;
+    } catch {
+      return null;
+    }
+  };
+
   const isSupported = () =>
     typeof window !== "undefined" &&
     "Notification" in window &&
@@ -47,16 +71,20 @@
   const permission = () =>
     isSupported() ? Notification.permission : "denied";
 
+  /**
+   * Topic déterministe par userId (même canal admin ↔ client, multi-appareils).
+   * Sans partie aléatoire : l’expéditeur et le destinataire convergent.
+   */
   const getTopicForUser = (userId) => {
     if (!userId) return null;
+    const clean = String(userId).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const topic = ("livrexpress" + (clean || "guest")).slice(0, 48);
     const map = readTopics();
-    if (map[userId]) return map[userId];
-    const topic =
-      "lx" +
-      String(userId).replace(/[^a-zA-Z0-9]/g, "").slice(-8) +
-      Math.random().toString(36).slice(2, 10);
-    map[userId] = topic;
-    writeTopics(map);
+    // Migrer d’anciens topics aléatoires vers le topic stable
+    if (map[userId] !== topic) {
+      map[userId] = topic;
+      writeTopics(map);
+    }
     return topic;
   };
 
@@ -79,6 +107,148 @@
           e?.message ||
           "Impossible d’enregistrer le Service Worker (HTTPS ou localhost requis).",
       };
+    }
+  };
+
+  /** Demande au SW d’écouter le canal en arrière-plan (app fermée / en fond) */
+  const tellSwStartListen = async (topic, userId) => {
+    if (!topic || !("serviceWorker" in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const msg = {
+        type: "START_BACKGROUND_LISTEN",
+        topic,
+        userId: userId || null,
+      };
+      if (reg.active) reg.active.postMessage(msg);
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(msg);
+      }
+    } catch (e) {
+      console.warn("LivrExpress SW listen:", e);
+    }
+  };
+
+  const tellSwStopListen = async () => {
+    if (!("serviceWorker" in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const msg = { type: "STOP_BACKGROUND_LISTEN" };
+      if (reg.active) reg.active.postMessage(msg);
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage(msg);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  };
+
+  /**
+   * Flux page (secours) : EventSource tant que l’onglet / PWA est en mémoire
+   * (y compris en arrière-plan si le navigateur ne tue pas le process).
+   */
+  const startPageStream = (topic, userId) => {
+    if (!topic || typeof EventSource === "undefined") return;
+    if (pageStream && pageStreamTopic === topic) return;
+
+    stopPageStream();
+    pageStreamTopic = topic;
+    pageStreamUserId = userId || null;
+
+    try {
+      const url = `https://ntfy.sh/${encodeURIComponent(topic)}/json`;
+      pageStream = new EventSource(url);
+
+      pageStream.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data || "{}");
+          if (!msg || (msg.event && msg.event !== "message")) return;
+          const title = msg.title || "LivrExpress";
+          const message = msg.message || msg.body || "Mise à jour LivrExpress";
+          // Le SW affiche déjà la notif via son flux ; on n’affiche ici que
+          // si le SW n’est pas controller (première visite / fallback).
+          if (!navigator.serviceWorker?.controller) {
+            showSystemNotification({
+              id: msg.id || "ntfy-" + Date.now(),
+              title,
+              message,
+              renotify: true,
+              url: msg.click || undefined,
+            });
+          }
+        } catch (_) {
+          /* ignore parse */
+        }
+      };
+
+      pageStream.onerror = () => {
+        // Reconnexion auto navigateur ; si fermé, on relance plus tard
+        if (pageStream && pageStream.readyState === EventSource.CLOSED) {
+          stopPageStream();
+          if (reconnectTimer) clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            if (pageStreamTopic) startPageStream(pageStreamTopic, pageStreamUserId);
+          }, 4000);
+        }
+      };
+    } catch (e) {
+      console.warn("LivrExpress page stream:", e);
+    }
+  };
+
+  const stopPageStream = () => {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (pageStream) {
+      try {
+        pageStream.close();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    pageStream = null;
+    pageStreamTopic = null;
+  };
+
+  /**
+   * Démarre l’écoute arrière-plan pour un utilisateur (SW + secours page).
+   * Aucune action manuelle « canal d’alertes » requise.
+   */
+  const startBackgroundAlerts = async (userId) => {
+    if (!userId || permission() !== "granted") {
+      return { ok: false, reason: "permission" };
+    }
+    const allPrefs = readPrefs();
+    const prefs = allPrefs[userId];
+    if (!prefs || !prefs.enabled) {
+      return { ok: false, reason: "disabled" };
+    }
+
+    const topic = getTopicForUser(userId);
+    if (!topic) return { ok: false, reason: "no-topic" };
+
+    // Aligner le topic stocké (migration anciens topics aléatoires)
+    if (prefs.topic !== topic) {
+      allPrefs[userId] = { ...prefs, topic };
+      writePrefs(allPrefs);
+    }
+
+    setActiveUser(userId);
+    await registerServiceWorker();
+    await tellSwStartListen(topic, userId);
+    startPageStream(topic, userId);
+
+    // Relancer le SW si la page redevient visible
+    return { ok: true, topic };
+  };
+
+  const stopBackgroundAlerts = async (userId) => {
+    stopPageStream();
+    await tellSwStopListen();
+    if (userId && getActiveUser() === String(userId)) {
+      setActiveUser(null);
     }
   };
 
@@ -126,12 +296,17 @@
     const topic = getTopicForUser(userId);
     const prefs = readPrefs();
     prefs[userId] = {
+      ...(prefs[userId] || {}),
       enabled: true,
       topic,
       phoneBridge: true,
+      background: true,
       enabledAt: new Date().toISOString(),
     };
     writePrefs(prefs);
+
+    // Écoute auto en arrière-plan (sans abonnement canal manuel)
+    await startBackgroundAlerts(userId);
 
     // Notification de confirmation (teste sonnerie système)
     await showSystemNotification({
@@ -139,7 +314,7 @@
       userId,
       title: "Notifications LivrExpress activées",
       message:
-        "Vous serez alerté à chaque évolution de colis — avec la sonnerie de votre téléphone.",
+        "Vous serez alerté à chaque évolution de colis — même en arrière-plan.",
       icon: "✅",
       renotify: true,
       requireInteraction: false,
@@ -149,7 +324,6 @@
       ok: true,
       permission: perm,
       topic,
-      ntfyUrl: topic ? `https://ntfy.sh/${topic}` : null,
     };
   };
 
@@ -158,8 +332,10 @@
     if (prefs[userId]) {
       prefs[userId].enabled = false;
       prefs[userId].phoneBridge = false;
+      prefs[userId].background = false;
       writePrefs(prefs);
     }
+    stopBackgroundAlerts(userId);
     return { ok: true };
   };
 
@@ -178,6 +354,7 @@
       enabled: isEnabledForUser(userId),
       topic: p.topic || (userId ? readTopics()[userId] : null) || null,
       phoneBridge: Boolean(p.phoneBridge),
+      background: Boolean(p.background !== false && p.enabled),
       sw: "serviceWorker" in navigator,
     };
   };
@@ -210,7 +387,6 @@
       const readyReg = reg || (await navigator.serviceWorker.ready.catch(() => null));
 
       if (readyReg) {
-        // Une seule notif système (sonnerie OS via silent:false + renotify)
         await readyReg.showNotification(data.title, {
           body: data.message,
           icon: data.iconUrl,
@@ -277,13 +453,13 @@
   };
 
   /**
-   * Pont hors-site : envoie l’alerte via ntfy.sh (gratuit).
-   * Le client doit s’abonner une fois au topic (lien fourni à l’activation).
-   * → Sonnerie native même si le navigateur / site est fermé.
+   * Pont hors-site : envoie l’alerte via ntfy (côté expéditeur).
+   * Le destinataire reçoit via le flux SW en arrière-plan (auto, sans abonnement UI).
    */
   const sendPhoneBridge = async (userId, payload = {}) => {
     const prefs = readPrefs()[userId];
-    const topic = (prefs && prefs.topic) || readTopics()[userId];
+    // Toujours le topic stable dérivé de l’userId (pas besoin d’abonnement local)
+    const topic = getTopicForUser(userId);
     if (!topic) return { ok: false, reason: "no-topic" };
     if (prefs && prefs.phoneBridge === false) {
       return { ok: false, reason: "bridge-off" };
@@ -296,7 +472,9 @@
           `suivi.html?id=${encodeURIComponent(payload.trackingId)}`,
           window.location.href
         ).href
-      : new URL("espace-client.html", window.location.href).href;
+      : payload.url
+        ? new URL(payload.url, window.location.href).href
+        : new URL("espace-client.html", window.location.href).href;
 
     try {
       const res = await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
@@ -307,7 +485,6 @@
           Priority: payload.statusKey === "delivered" ? "high" : "default",
           Tags: "package,truck",
           Click: clickUrl,
-          // Icône affichée dans l’app ntfy / certains clients
           Icon: new URL("images/icon-192.png", window.location.href).href,
         },
       });
@@ -330,7 +507,6 @@
 
     const results = { system: null, bridge: null };
 
-    // URL par défaut selon le type (admin = dashboard, client = suivi)
     const enriched = {
       ...payload,
       url:
@@ -342,8 +518,6 @@
             : undefined),
     };
 
-    // Afficher la bannière OS uniquement si CET appareil appartient au destinataire
-    // (évite d’alerter le client quand on notifie les admins, et inversement)
     const prefs = readPrefs()[userId];
     const deviceBoundToUser = Boolean(prefs && prefs.enabled);
     let isLoggedAsTarget = false;
@@ -362,7 +536,7 @@
       results.system = await showSystemNotification(enriched);
     }
 
-    // Pont distant (topic ntfy du destinataire — même site fermé)
+    // Pont distant → réveillé par le SW du destinataire en arrière-plan
     results.bridge = await sendPhoneBridge(userId, enriched);
 
     try {
@@ -402,11 +576,67 @@
     }
   };
 
-  // Enregistrement SW précoce (si déjà autorisé)
+  /**
+   * Reprend l’écoute si les notifs étaient déjà activées
+   * (chargement page, retour au premier plan).
+   */
+  const resumeIfEnabled = async () => {
+    if (permission() !== "granted") return;
+
+    let userId = getActiveUser();
+    if (!userId) {
+      try {
+        const Auth = global.Auth || global.LivrExpressAuth;
+        const u = Auth?.getCurrentUser?.();
+        if (u?.id && isEnabledForUser(u.id)) userId = u.id;
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    // Fallback : premier user enabled dans les prefs
+    if (!userId) {
+      const prefs = readPrefs();
+      userId = Object.keys(prefs).find((id) => prefs[id] && prefs[id].enabled) || null;
+    }
+
+    if (userId && isEnabledForUser(userId)) {
+      await startBackgroundAlerts(userId);
+    }
+  };
+
+  // Enregistrement SW précoce + reprise écoute arrière-plan
   if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      registerServiceWorker().catch(() => undefined);
+      registerServiceWorker()
+        .then(() => resumeIfEnabled())
+        .catch(() => undefined);
     });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        resumeIfEnabled().catch(() => undefined);
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      resumeIfEnabled().catch(() => undefined);
+    });
+
+    // Persiste un signal de vie pour le SW (client encore en mémoire)
+    setInterval(() => {
+      if (navigator.serviceWorker?.controller && pageStreamTopic) {
+        try {
+          navigator.serviceWorker.controller.postMessage({
+            type: "CLIENT_HEARTBEAT",
+            topic: pageStreamTopic,
+            at: Date.now(),
+          });
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }, 25000);
   }
 
   // Clic sur notification → navigation
@@ -416,6 +646,15 @@
       if (msg.type === "NOTIFICATION_CLICK" && msg.url) {
         try {
           window.location.href = msg.url;
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      if (msg.type === "BACKGROUND_LISTEN_STATUS") {
+        try {
+          global.dispatchEvent(
+            new CustomEvent("livrexpress:bg-listen", { detail: msg })
+          );
         } catch (_) {
           /* ignore */
         }
@@ -436,5 +675,8 @@
     sendPhoneBridge,
     notifyClientDevice,
     playFallbackSound,
+    startBackgroundAlerts,
+    stopBackgroundAlerts,
+    resumeIfEnabled,
   };
 })(typeof window !== "undefined" ? window : globalThis);

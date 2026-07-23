@@ -958,7 +958,7 @@
         return;
       }
 
-      // Overlay injecté sur la page courante (chaque refresh)
+      // Overlay injecté sur la page courante (chaque visite login / refresh)
       let root = document.getElementById("splashOverlay");
       if (!root) {
         root = document.createElement("div");
@@ -1005,7 +1005,7 @@
       if (bar) bar.style.width = "0%";
       if (percentEl) percentEl.textContent = "0%";
 
-      // Relancer les animations CSS de l’icône à chaque refresh
+      // Relancer les animations CSS de l’icône à chaque passage
       const iconWrap = root.querySelector(".splash__icon-wrap");
       if (iconWrap) {
         iconWrap.style.animation = "none";
