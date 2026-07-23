@@ -1404,23 +1404,30 @@
     if (hello) hello.textContent = user.name.split(" ")[0] || user.name;
 
     // —— Notifications téléphone (sonnerie système) ——
+    // Section visible UNIQUEMENT si les notifs ne sont pas encore activées.
+    // Clic « Activer » → popup d’autorisation → section masquée auto si OK.
     const Push = window.LivrExpressPush;
     const pushBanner = document.getElementById("pushBanner");
-    const PUSH_DISMISS_KEY = `livrexpress_push_dismiss_${user.id}`;
 
     const refreshPushBanner = () => {
       if (!pushBanner || !Push) return;
       const st = Push.getStatus(user.id);
-      const dismissed = sessionStorage.getItem(PUSH_DISMISS_KEY) === "1";
       const titleEl = document.getElementById("pushBannerTitle");
       const textEl = document.getElementById("pushBannerText");
       const statusEl = document.getElementById("pushBannerStatus");
       const enableBtn = document.getElementById("pushEnableBtn");
-      const testBtn = document.getElementById("pushTestBtn");
-      const dismissBtn = document.getElementById("pushDismissBtn");
+
+      pushBanner.classList.remove("push-banner--ok", "push-banner--warn");
+      if (statusEl) statusEl.hidden = true;
+
+      // Déjà activées → masquer la section, garder l’écoute arrière-plan
+      if (st.supported && st.enabled && st.permission === "granted") {
+        pushBanner.hidden = true;
+        Push.startBackgroundAlerts?.(user.id);
+        return;
+      }
 
       pushBanner.hidden = false;
-      pushBanner.classList.remove("push-banner--ok", "push-banner--warn");
 
       if (!st.supported) {
         pushBanner.classList.add("push-banner--warn");
@@ -1430,31 +1437,6 @@
             "Votre navigateur ne permet pas les alertes système. Essayez Chrome ou Edge sur Android, ou Safari (app sur l’écran d’accueil) sur iPhone.";
         }
         if (enableBtn) enableBtn.hidden = true;
-        if (testBtn) testBtn.hidden = true;
-        if (statusEl) statusEl.hidden = true;
-        return;
-      }
-
-      if (st.enabled && st.permission === "granted") {
-        pushBanner.classList.add("push-banner--ok");
-        if (titleEl) titleEl.textContent = "Alertes téléphone activées";
-        if (textEl) {
-          textEl.innerHTML =
-            "À chaque statut de colis, votre téléphone affiche une notification avec la <strong>sonnerie système</strong> — y compris quand l’app est en <strong>arrière-plan</strong>.";
-        }
-        if (enableBtn) {
-          enableBtn.hidden = true;
-        }
-        if (testBtn) testBtn.hidden = false;
-        if (statusEl) {
-          statusEl.hidden = false;
-          statusEl.textContent =
-            "Statut : autorisé · écoute en arrière-plan active";
-        }
-        if (dismissBtn) dismissBtn.textContent = "Masquer";
-        if (dismissed) pushBanner.hidden = true;
-        // Relance l’écoute arrière-plan (SW) si déjà activé
-        Push.startBackgroundAlerts?.(user.id);
         return;
       }
 
@@ -1469,15 +1451,10 @@
           enableBtn.hidden = false;
           enableBtn.textContent = "Réessayer";
         }
-        if (testBtn) testBtn.hidden = true;
         return;
       }
 
-      // Pas encore activé
-      if (dismissed && st.permission === "default") {
-        pushBanner.hidden = true;
-        return;
-      }
+      // Pas encore activé → afficher le bandeau + bouton d’activation
       if (titleEl) titleEl.textContent = "Activez les alertes sur votre téléphone";
       if (textEl) {
         textEl.innerHTML =
@@ -1485,10 +1462,9 @@
       }
       if (enableBtn) {
         enableBtn.hidden = false;
+        enableBtn.disabled = false;
         enableBtn.textContent = "Activer les notifications";
       }
-      if (testBtn) testBtn.hidden = true;
-      if (statusEl) statusEl.hidden = true;
     };
 
     document.getElementById("pushEnableBtn")?.addEventListener("click", async () => {
@@ -1498,39 +1474,23 @@
         enableBtn.disabled = true;
         enableBtn.textContent = "Activation…";
       }
+      // Popup d’autorisation (uniquement si notifs pas déjà accordées)
+      // puis dialogue natif navigateur — géré dans enablePhoneNotifications
       const res = await Push.enablePhoneNotifications(user.id);
-      if (enableBtn) enableBtn.disabled = false;
+      if (enableBtn) {
+        enableBtn.disabled = false;
+        enableBtn.textContent = "Activer les notifications";
+      }
       if (!res.ok) {
-        alert(res.error || "Impossible d’activer les notifications.");
+        // Reporté (« Plus tard ») : pas d’alerte intrusive
+        if (res.error && !/reportée|dismissed/i.test(res.error)) {
+          alert(res.error || "Impossible d’activer les notifications.");
+        }
         refreshPushBanner();
         return;
       }
-      sessionStorage.removeItem(PUSH_DISMISS_KEY);
-      // Pas de popup « canal d’alertes » : l’écoute arrière-plan démarre toute seule
+      // Activées → la section disparaît automatiquement
       refreshPushBanner();
-    });
-
-    document.getElementById("pushTestBtn")?.addEventListener("click", async () => {
-      if (!Push) return;
-      Push.playFallbackSound?.();
-      await Push.showSystemNotification({
-        id: "test-" + Date.now(),
-        title: "Test LivrExpress",
-        message:
-          "Si vous entendez la sonnerie de notification de votre téléphone, c’est bon !",
-        icon: "🔔",
-        renotify: true,
-      });
-      // Test aussi le chemin arrière-plan (pont → SW)
-      await Push.sendPhoneBridge?.(user.id, {
-        title: "Test LivrExpress (arrière-plan)",
-        message: "Alerte reçue même hors écran de l’app.",
-      });
-    });
-
-    document.getElementById("pushDismissBtn")?.addEventListener("click", () => {
-      sessionStorage.setItem(PUSH_DISMISS_KEY, "1");
-      if (pushBanner) pushBanner.hidden = true;
     });
 
     refreshPushBanner();
@@ -2652,7 +2612,6 @@
     const notifOverlay = document.getElementById("notifOverlay");
     const toastedIds = new Set();
     const TOAST_SEEN_KEY = `livrexpress_toast_seen_${admin.id}`;
-    const PUSH_DISMISS_KEY = `livrexpress_push_dismiss_${admin.id}`;
 
     try {
       const seen = JSON.parse(sessionStorage.getItem(TOAST_SEEN_KEY) || "[]");
@@ -2874,58 +2833,55 @@
       refreshAdmin();
     });
 
-    // Push banner admin
+    // Push banner admin — visible uniquement si notifs non activées
     const pushBanner = document.getElementById("pushBanner");
     const refreshPushBanner = () => {
       if (!pushBanner || !Push) return;
       const st = Push.getStatus(admin.id);
-      const dismissed = sessionStorage.getItem(PUSH_DISMISS_KEY) === "1";
       const titleEl = document.getElementById("pushBannerTitle");
       const textEl = document.getElementById("pushBannerText");
       const enableBtn = document.getElementById("pushEnableBtn");
-      const testBtn = document.getElementById("pushTestBtn");
-      const dismissBtn = document.getElementById("pushDismissBtn");
+
+      pushBanner.classList.remove("push-banner--ok", "push-banner--warn");
+
+      // Déjà activées → masquer la section, garder l’écoute arrière-plan
+      if (st.supported && st.enabled && st.permission === "granted") {
+        pushBanner.hidden = true;
+        Push.startBackgroundAlerts?.(admin.id);
+        return;
+      }
 
       pushBanner.hidden = false;
-      pushBanner.classList.remove("push-banner--ok", "push-banner--warn");
 
       if (!st.supported) {
         pushBanner.classList.add("push-banner--warn");
         if (titleEl) titleEl.textContent = "Notifications non supportées";
         if (enableBtn) enableBtn.hidden = true;
-        if (testBtn) testBtn.hidden = true;
-        return;
-      }
-      if (st.enabled && st.permission === "granted") {
-        pushBanner.classList.add("push-banner--ok");
-        if (titleEl) titleEl.textContent = "Alertes nouvelles commandes activées";
-        if (textEl) {
-          textEl.textContent =
-            "Vous serez alerté automatiquement à chaque demande client.";
-        }
-        if (enableBtn) enableBtn.hidden = true;
-        if (testBtn) testBtn.hidden = false;
-        if (dismissed) pushBanner.hidden = true;
         return;
       }
       if (st.permission === "denied") {
         pushBanner.classList.add("push-banner--warn");
         if (titleEl) titleEl.textContent = "Notifications bloquées";
+        if (textEl) {
+          textEl.textContent =
+            "Autorisez LivrExpress dans les réglages du navigateur, puis rechargez la page.";
+        }
         if (enableBtn) {
           enableBtn.hidden = false;
           enableBtn.textContent = "Réessayer";
         }
         return;
       }
-      if (dismissed && st.permission === "default") {
-        pushBanner.hidden = true;
-        return;
+      if (titleEl) titleEl.textContent = "Activez les alertes nouvelles commandes";
+      if (textEl) {
+        textEl.textContent =
+          "Recevez une notification téléphone à chaque nouvelle demande client, même si l’onglet admin n’est pas au premier plan.";
       }
       if (enableBtn) {
         enableBtn.hidden = false;
+        enableBtn.disabled = false;
         enableBtn.textContent = "Activer les notifications";
       }
-      if (testBtn) testBtn.hidden = true;
     };
 
     document.getElementById("pushEnableBtn")?.addEventListener("click", async () => {
@@ -2935,28 +2891,19 @@
         enableBtn.disabled = true;
         enableBtn.textContent = "Activation…";
       }
+      // Popup d’autorisation seulement si notifs pas encore accordées
       const res = await Push.enablePhoneNotifications(admin.id);
-      if (enableBtn) enableBtn.disabled = false;
-      if (!res.ok) {
-        alert(res.error || "Impossible d’activer les notifications.");
-      } else {
-        sessionStorage.removeItem(PUSH_DISMISS_KEY);
+      if (enableBtn) {
+        enableBtn.disabled = false;
+        enableBtn.textContent = "Activer les notifications";
       }
+      if (!res.ok) {
+        if (res.error && !/reportée|dismissed/i.test(res.error)) {
+          alert(res.error || "Impossible d’activer les notifications.");
+        }
+      }
+      // Si OK → section masquée automatiquement
       refreshPushBanner();
-    });
-    document.getElementById("pushTestBtn")?.addEventListener("click", async () => {
-      if (!Push) return;
-      await Push.showSystemNotification({
-        id: "admin-test-" + Date.now(),
-        title: "Test admin LivrExpress",
-        message: "Les alertes nouvelles commandes fonctionnent.",
-        url: "./admin.html",
-        renotify: true,
-      });
-    });
-    document.getElementById("pushDismissBtn")?.addEventListener("click", () => {
-      sessionStorage.setItem(PUSH_DISMISS_KEY, "1");
-      if (pushBanner) pushBanner.hidden = true;
     });
     refreshPushBanner();
 
