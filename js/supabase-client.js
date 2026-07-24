@@ -342,45 +342,120 @@
   };
 
   // —— Mapping métier ——
-  const orderToRow = (o) => ({
-    id: o.id,
-    user_id: o.userId,
-    user_email: o.userEmail || "",
-    user_name: o.userName || "",
-    status: o.status,
-    plan: o.plan,
-    pricing: o.pricing || {},
-    sender: o.sender || {},
-    recipient: o.recipient || {},
-    package: o.package || {},
-    notes: o.notes || "",
-    tracking_id: o.trackingId || null,
-    reject_reason: o.rejectReason || "",
-    reviewed_at: o.reviewedAt || null,
-    reviewed_by: o.reviewedBy || null,
-    created_at: o.createdAt,
-    updated_at: o.updatedAt || o.createdAt,
-  });
+  const orderToRow = (o) => {
+    // GPS / modes embarqués dans sender & recipient (jsonb) — pas de colonnes dédiées
+    const sender = { ...(o.sender || {}) };
+    const recipient = { ...(o.recipient || {}) };
+    if (o.locations?.pickup) {
+      if (sender.lat == null && o.locations.pickup.lat != null) {
+        sender.lat = o.locations.pickup.lat;
+        sender.lng = o.locations.pickup.lng;
+      }
+      if (!sender.address && o.locations.pickup.label) {
+        sender.address = o.locations.pickup.label;
+      }
+      sender.locationSource =
+        sender.locationSource || o.locations.pickup.source || o.pickupMode;
+    }
+    if (o.locations?.delivery) {
+      if (recipient.lat == null && o.locations.delivery.lat != null) {
+        recipient.lat = o.locations.delivery.lat;
+        recipient.lng = o.locations.delivery.lng;
+      }
+      if (!recipient.address && o.locations.delivery.label) {
+        recipient.address = o.locations.delivery.label;
+      }
+      recipient.locationSource =
+        recipient.locationSource ||
+        o.locations.delivery.source ||
+        o.deliveryMode;
+    }
+    // Métadonnées course dans package pour ne pas perdre locations
+    const pkg = {
+      ...(o.package || {}),
+      _locations: o.locations || null,
+      _pickupMode: o.pickupMode || null,
+      _deliveryMode: o.deliveryMode || null,
+    };
+    return {
+      id: o.id,
+      user_id: o.userId,
+      user_email: o.userEmail || "",
+      user_name: o.userName || "",
+      status: o.status,
+      plan: o.plan,
+      pricing: o.pricing || {},
+      sender,
+      recipient,
+      package: pkg,
+      notes: o.notes || "",
+      tracking_id: o.trackingId || null,
+      reject_reason: o.rejectReason || "",
+      reviewed_at: o.reviewedAt || null,
+      reviewed_by: o.reviewedBy || null,
+      created_at: o.createdAt,
+      updated_at: o.updatedAt || o.createdAt,
+    };
+  };
 
-  const rowToOrder = (r) => ({
-    id: r.id,
-    userId: r.user_id,
-    userEmail: r.user_email,
-    userName: r.user_name,
-    status: r.status,
-    plan: r.plan,
-    pricing: r.pricing || {},
-    sender: r.sender || {},
-    recipient: r.recipient || {},
-    package: r.package || {},
-    notes: r.notes || "",
-    trackingId: r.tracking_id,
-    rejectReason: r.reject_reason || "",
-    reviewedAt: r.reviewed_at,
-    reviewedBy: r.reviewed_by,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  });
+  const rowToOrder = (r) => {
+    const sender = r.sender || {};
+    const recipient = r.recipient || {};
+    const pkg = r.package || {};
+    const locations =
+      pkg._locations ||
+      ({
+        pickup:
+          sender.lat != null && sender.lng != null
+            ? {
+                lat: sender.lat,
+                lng: sender.lng,
+                label: sender.address || "",
+                source: sender.locationSource || "gps",
+              }
+            : sender.address
+              ? { label: sender.address, source: "address" }
+              : null,
+        delivery:
+          recipient.lat != null && recipient.lng != null
+            ? {
+                lat: recipient.lat,
+                lng: recipient.lng,
+                label: recipient.address || "",
+                source: recipient.locationSource || "gps",
+              }
+            : recipient.address
+              ? { label: recipient.address, source: "address" }
+              : null,
+      });
+    // Nettoie les meta internes du package exposé à l’UI
+    const cleanPkg = { ...pkg };
+    delete cleanPkg._locations;
+    delete cleanPkg._pickupMode;
+    delete cleanPkg._deliveryMode;
+    return {
+      id: r.id,
+      userId: r.user_id,
+      userEmail: r.user_email,
+      userName: r.user_name,
+      status: r.status,
+      plan: r.plan,
+      pricing: r.pricing || {},
+      sender,
+      recipient,
+      package: cleanPkg,
+      notes: r.notes || "",
+      trackingId: r.tracking_id,
+      rejectReason: r.reject_reason || "",
+      reviewedAt: r.reviewed_at,
+      reviewedBy: r.reviewed_by,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      locations,
+      pickupMode: pkg._pickupMode || sender.locationSource || "address",
+      deliveryMode: pkg._deliveryMode || recipient.locationSource || "address",
+    };
+  };
 
   const shipToRow = (s) => ({
     tracking_id: s.trackingId,

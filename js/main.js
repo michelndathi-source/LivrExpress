@@ -324,13 +324,43 @@
       el.value =
         pos.label ||
         `GPS départ ${Number(pos.lat).toFixed(5)}, ${Number(pos.lng).toFixed(5)}`;
-      el.readOnly = true;
+      el.readOnly = false;
       el.classList.remove("is-invalid");
     }
     const hint = document.getElementById("orderPickupGpsHint");
     if (hint) {
       hint.hidden = false;
       hint.textContent = formatGpsHint(pos, "départ");
+    }
+  };
+
+  /** Géocode une adresse → coords (fallback si GPS indisponible) */
+  const geocodeToGps = async (address, role = "point") => {
+    const addr = String(address || "").trim();
+    if (!addr) return null;
+    const Geo = window.LivrExpressGeo;
+    const MapApi = window.LivrExpressMap;
+    try {
+      const g = MapApi?.geocode
+        ? await MapApi.geocode(addr)
+        : Geo?.geocodeAddress
+          ? await Geo.geocodeAddress(addr)
+          : null;
+      if (!g || typeof g.lat !== "number" || typeof g.lng !== "number") {
+        return null;
+      }
+      return {
+        lat: g.lat,
+        lng: g.lng,
+        accuracy: null,
+        label: g.label || addr,
+        source:
+          g.source === "fallback" ? "geocoded_approx" : g.source || "geocoded",
+        at: new Date().toISOString(),
+      };
+    } catch (e) {
+      console.warn("geocode", role, e);
+      return null;
     }
   };
 
@@ -447,7 +477,9 @@
     const pickupEl = document.getElementById("orderPickup");
     if (pickupEl) {
       pickupEl.value = "";
-      pickupEl.readOnly = true;
+      pickupEl.readOnly = false;
+      pickupEl.placeholder =
+        "Position GPS du téléphone… (activez la localisation)";
     }
     orderPickupGps = null;
     orderDeliveryGps = null;
@@ -689,24 +721,57 @@
       }
 
       try {
-        // 1) Départ : GPS téléphone client obligatoire
+        if (submitBtn) submitBtn.textContent = "Envoi en cours…";
+
+        // 1) Départ : GPS téléphone client (auto) → sinon géocode adresse
         if (!orderPickupGps?.lat || !orderPickupGps?.lng) {
-          const captured = await autoCapturePickupGps();
-          if (!captured?.lat) {
+          await autoCapturePickupGps();
+        }
+        pickup =
+          pickupEl?.value?.trim() ||
+          orderPickupGps?.label ||
+          "";
+        if (!pickup && !orderPickupGps) {
+          if (pickupEl) pickupEl.classList.add("is-invalid");
+          setOrderMessage(
+            "Indiquez le point de départ (activez le GPS ou saisissez l’adresse).",
+            ""
+          );
+          return;
+        }
+        if (!orderPickupGps?.lat || !orderPickupGps?.lng) {
+          if (!pickup) {
             setOrderMessage(
-              "Activez le GPS du téléphone du client qui commande pour l’adresse de départ du colis.",
+              "Activez le GPS ou saisissez l’adresse de départ.",
               ""
             );
             if (pickupEl) pickupEl.classList.add("is-invalid");
             return;
           }
+          const geoPickup = await geocodeToGps(pickup, "départ");
+          if (geoPickup) {
+            orderPickupGps = geoPickup;
+            applyPickupGps(geoPickup);
+            if (pickupEl && !pickupEl.value.trim()) {
+              pickupEl.value = geoPickup.label || pickup;
+            }
+          } else {
+            // Dernier recours : coords nulles interdites pour la carte — centre Dakar + offset
+            orderPickupGps = {
+              lat: 14.7167,
+              lng: -17.4677,
+              label: pickup,
+              source: "address_fallback",
+              at: new Date().toISOString(),
+            };
+          }
         }
         pickup =
           pickupEl?.value?.trim() ||
           orderPickupGps.label ||
-          "Point de départ GPS";
+          "Point de départ";
 
-        // 2) Livraison : coords obligatoires (capture GPS ou saisie destinataire)
+        // 2) Livraison : coords GPS saisis / capturés → sinon géocode adresse
         let deliveryGps = orderDeliveryGps;
         const manual = readManualDeliveryGps();
         if (manual) deliveryGps = manual;
@@ -715,26 +780,46 @@
           typeof deliveryGps.lat !== "number" ||
           typeof deliveryGps.lng !== "number"
         ) {
+          const geoDrop = await geocodeToGps(dropoff, "livraison");
+          if (geoDrop) {
+            deliveryGps = geoDrop;
+          }
+        }
+        if (
+          !deliveryGps ||
+          typeof deliveryGps.lat !== "number" ||
+          typeof deliveryGps.lng !== "number"
+        ) {
           if (dropLatEl) dropLatEl.classList.add("is-invalid");
           if (dropLngEl) dropLngEl.classList.add("is-invalid");
           setOrderMessage(
-            "Indiquez les coordonnées GPS du point de livraison (bouton « Capturer GPS » ou latitude / longitude fournies par le destinataire).",
+            "Indiquez l’adresse de livraison et ses coordonnées GPS (bouton « Capturer GPS », latitude/longitude, ou une adresse géolocalisable à Dakar).",
             ""
           );
           return;
         }
-        orderDeliveryGps = deliveryGps;
-        fillDeliveryCoordInputs(deliveryGps);
+        orderDeliveryGps = {
+          ...deliveryGps,
+          label: dropoff || deliveryGps.label || "Point de livraison",
+        };
+        fillDeliveryCoordInputs(orderDeliveryGps);
 
-        const pickupMode = "gps";
-        const deliveryMode = "gps";
+        const pickupMode =
+          orderPickupGps.source === "gps" || orderPickupGps.source === "manual_coords"
+            ? "gps"
+            : orderPickupGps.source || "gps";
+        const deliveryMode =
+          orderDeliveryGps.source === "manual_coords" ||
+          orderDeliveryGps.source === "gps"
+            ? "gps"
+            : orderDeliveryGps.source || "gps";
 
         const locations = Geo?.buildLocationsPayload
           ? Geo.buildLocationsPayload({
-              pickupMode,
+              pickupMode: "gps",
               pickupGps: orderPickupGps,
               pickupAddress: pickup,
-              deliveryMode,
+              deliveryMode: "gps",
               deliveryGps: orderDeliveryGps,
               deliveryAddress: dropoff,
             })
@@ -743,7 +828,7 @@
                 lat: orderPickupGps.lat,
                 lng: orderPickupGps.lng,
                 label: pickup,
-                source: "gps",
+                source: orderPickupGps.source || "gps",
               },
               delivery: {
                 lat: orderDeliveryGps.lat,
@@ -752,6 +837,14 @@
                 source: orderDeliveryGps.source || "gps",
               },
             };
+
+        if (!locations.pickup?.lat || !locations.delivery?.lat) {
+          setOrderMessage(
+            "Impossible d’enregistrer les positions de course. Réessayez.",
+            ""
+          );
+          return;
+        }
 
         const request = LX.createOrderRequest(
           {
@@ -775,20 +868,26 @@
           user
         );
 
+        if (!request || !request.id) {
+          setOrderMessage("La demande n’a pas pu être enregistrée. Réessayez.", "");
+          return;
+        }
+
         showOrderSuccessView(request);
         orderForm.reset();
         orderPickupGps = null;
         orderDeliveryGps = null;
         if (orderPlan && plan) orderPlan.value = plan;
-        if (pickupEl) {
-          pickupEl.readOnly = true;
-          pickupEl.value = "";
-        }
+        if (pickupEl) pickupEl.value = "";
+        if (dropLatEl) dropLatEl.value = "";
+        if (dropLngEl) dropLngEl.value = "";
 
+        // Rafraîchir listes (local + cloud fusionnés)
         if (typeof window.__refreshClientDash === "function") {
-          window.__refreshClientDash();
+          await window.__refreshClientDash();
         }
       } catch (err) {
+        console.error("order submit:", err);
         setOrderMessage(err.message || "Erreur lors de l’envoi.", "");
       } finally {
         if (submitBtn) {
@@ -3062,7 +3161,8 @@
     window.addEventListener("storage", (e) => {
       if (
         e.key === "livrexpress_notifications_v1" ||
-        e.key === "livrexpress_order_requests_v1"
+        e.key === "livrexpress_order_requests_v1" ||
+        e.key === "livrexpress_orders_ping"
       ) {
         onAdminNotif();
       }
@@ -3079,6 +3179,14 @@
           /* ignore */
         }
       }
+      // Toujours recharger les commandes cloud+local (évite liste admin vide)
+      try {
+        if (typeof LX.listOrderRequestsAsync === "function") {
+          await LX.listOrderRequestsAsync();
+        }
+      } catch (_) {
+        /* ignore */
+      }
       const unread = LX.countUnreadNotifications?.(admin.id) ?? 0;
       if (unread !== lastUnreadAdmin) {
         lastUnreadAdmin = unread;
@@ -3087,7 +3195,6 @@
       } else {
         updateNotifBadges();
       }
-      // Rafraîchir la liste des demandes si le compteur change
       try {
         const pending = (LX.listOrderRequests({ status: "pending" }) || []).length;
         if (pending !== lastPendingCount) {

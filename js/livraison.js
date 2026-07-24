@@ -990,10 +990,16 @@
 
     map[id] = request;
     writeOrders(map);
+
+    // Sync cloud (non bloquant pour l’UI — le local est déjà enregistré)
     if (useSupabase()) {
-      global.LivrExpressSB.upsertOrder(request).catch((e) =>
-        console.warn("Sync order:", e)
-      );
+      global.LivrExpressSB.upsertOrder(request)
+        .then((res) => {
+          if (!res?.ok) {
+            console.warn("Sync order failed:", res?.error || res);
+          }
+        })
+        .catch((e) => console.warn("Sync order:", e));
     }
 
     // —— Notifications automatiques ——
@@ -1006,7 +1012,7 @@
       icon: "⏳",
     });
 
-    // 2) Admins : nouvelle commande à valider (immédiat + async Supabase)
+    // 2) Admins : nouvelle commande à valider (local + async)
     const adminPayload = {
       type: "new_order",
       title: "Nouvelle commande",
@@ -1016,7 +1022,6 @@
       url: "admin.html",
     };
     const adminNotifs = notifyAdmins(adminPayload);
-    // Enrichit avec les IDs admin distants absents du local (sans bloquer)
     notifyAdminsAsync(
       adminPayload,
       adminNotifs.map((n) => n.userId)
@@ -1028,6 +1033,13 @@
           detail: { request },
         })
       );
+      // multi-onglets / admin ouvert en parallèle
+      if (global.localStorage) {
+        global.localStorage.setItem(
+          "livrexpress_orders_ping",
+          String(Date.now())
+        );
+      }
     } catch (_) {
       /* ignore */
     }
@@ -1044,23 +1056,53 @@
     return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   };
 
-  /** Liste commandes (Supabase si actif, sinon local) */
-  const listOrderRequestsAsync = async (filter = {}) => {
-    if (useSupabase()) {
-      try {
-        const remote = await global.LivrExpressSB.listOrdersRemote(filter);
-        // miroir local pour offline
-        const map = readOrders();
-        remote.forEach((o) => {
-          map[o.id] = o;
-        });
-        writeOrders(map);
-        return remote;
-      } catch (e) {
-        console.warn("listOrderRequestsAsync:", e);
+  /** Fusionne commandes locales + distantes (ne perd jamais le local) */
+  const mergeOrderLists = (localList, remoteList) => {
+    const byId = new Map();
+    (localList || []).forEach((o) => {
+      if (o && o.id) byId.set(o.id, o);
+    });
+    (remoteList || []).forEach((o) => {
+      if (!o || !o.id) return;
+      const prev = byId.get(o.id);
+      if (!prev) {
+        byId.set(o.id, o);
+        return;
       }
+      // Garde la version la plus récente
+      const tPrev = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+      const tNew = new Date(o.updatedAt || o.createdAt || 0).getTime();
+      byId.set(o.id, tNew >= tPrev ? { ...prev, ...o } : { ...o, ...prev });
+    });
+    return [...byId.values()].sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+    );
+  };
+
+  /** Liste commandes (Supabase + local fusionnés — jamais de liste vide si le local a des données) */
+  const listOrderRequestsAsync = async (filter = {}) => {
+    const local = listOrderRequests(filter);
+    if (!useSupabase()) return local;
+    try {
+      const remote = await global.LivrExpressSB.listOrdersRemote(filter);
+      const merged = mergeOrderLists(local, remote);
+      // miroir local pour offline / multi-onglets
+      const map = readOrders();
+      merged.forEach((o) => {
+        if (o && o.id) map[o.id] = o;
+      });
+      writeOrders(map);
+      // re-filtre (userId / status) après fusion
+      let list = merged;
+      if (filter.userId) list = list.filter((o) => o.userId === filter.userId);
+      if (filter.status) list = list.filter((o) => o.status === filter.status);
+      return list.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+    } catch (e) {
+      console.warn("listOrderRequestsAsync:", e);
+      return local;
     }
-    return listOrderRequests(filter);
   };
 
   const listShipmentsByUser = (userId) => {
@@ -1071,22 +1113,39 @@
   };
 
   const listShipmentsByUserAsync = async (userId) => {
-    if (useSupabase() && userId) {
-      try {
-        const remote = await global.LivrExpressSB.listShipmentsRemote({
-          userId,
-        });
-        const map = readAll();
-        remote.forEach((s) => {
-          map[s.trackingId] = s;
-        });
-        writeAll(map);
-        return remote.filter((s) => s.source !== "demo");
-      } catch (e) {
-        console.warn("listShipmentsByUserAsync:", e);
-      }
+    const local = listShipmentsByUser(userId);
+    if (!useSupabase() || !userId) return local;
+    try {
+      const remote = await global.LivrExpressSB.listShipmentsRemote({
+        userId,
+      });
+      const byId = new Map();
+      local.forEach((s) => {
+        if (s?.trackingId) byId.set(s.trackingId, s);
+      });
+      (remote || []).forEach((s) => {
+        if (!s?.trackingId || s.source === "demo") return;
+        const prev = byId.get(s.trackingId);
+        if (!prev) byId.set(s.trackingId, s);
+        else {
+          const tPrev = new Date(prev.updatedAt || prev.createdAt || 0).getTime();
+          const tNew = new Date(s.updatedAt || s.createdAt || 0).getTime();
+          byId.set(s.trackingId, tNew >= tPrev ? { ...prev, ...s } : { ...s, ...prev });
+        }
+      });
+      const merged = [...byId.values()].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      const map = readAll();
+      merged.forEach((s) => {
+        map[s.trackingId] = s;
+      });
+      writeAll(map);
+      return merged.filter((s) => s.source !== "demo");
+    } catch (e) {
+      console.warn("listShipmentsByUserAsync:", e);
+      return local;
     }
-    return listShipmentsByUser(userId);
   };
 
   /**

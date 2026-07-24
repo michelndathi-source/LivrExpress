@@ -102,6 +102,82 @@
     }
   };
 
+  /** Quartiers Dakar (géocodage local sans Leaflet) */
+  const DAKAR_PLACES = {
+    plateau: { lat: 14.6682, lng: -17.4381, label: "Plateau" },
+    medina: { lat: 14.6809, lng: -17.4495, label: "Médina" },
+    almadies: { lat: 14.7395, lng: -17.5256, label: "Almadies" },
+    ouakam: { lat: 14.7228, lng: -17.4905, label: "Ouakam" },
+    ngor: { lat: 14.748, lng: -17.5145, label: "Ngor" },
+    yoff: { lat: 14.7535, lng: -17.473, label: "Yoff" },
+    parcelles: { lat: 14.7645, lng: -17.4355, label: "Parcelles Assainies" },
+    liberte: { lat: 14.7165, lng: -17.462, label: "Liberté 6" },
+    "point e": { lat: 14.6935, lng: -17.4665, label: "Point E" },
+    fann: { lat: 14.6905, lng: -17.4685, label: "Fann" },
+    mermoz: { lat: 14.707, lng: -17.473, label: "Mermoz" },
+    pikine: { lat: 14.7548, lng: -17.3985, label: "Pikine" },
+    guediawaye: { lat: 14.776, lng: -17.395, label: "Guédiawaye" },
+    rufisque: { lat: 14.7167, lng: -17.2667, label: "Rufisque" },
+    dakar: { lat: 14.7167, lng: -17.4677, label: "Dakar" },
+  };
+
+  /**
+   * Géocode adresse → { lat, lng, label, source }
+   * Utilisable sur le formulaire commande (sans live-map.js).
+   */
+  const geocodeAddress = async (address) => {
+    if (global.LivrExpressMap?.geocode) {
+      return global.LivrExpressMap.geocode(address);
+    }
+    const raw = String(address || "").trim();
+    if (!raw) return null;
+    const n = raw
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s']/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const keys = Object.keys(DAKAR_PLACES).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (n.includes(key)) {
+        const p = DAKAR_PLACES[key];
+        return { lat: p.lat, lng: p.lng, label: p.label, source: "local" };
+      }
+    }
+    try {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.set("q", `${raw}, Dakar, Senegal`);
+      url.searchParams.set("format", "json");
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("countrycodes", "sn");
+      const res = await fetch(url.toString(), {
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.[0]) {
+          return {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            label: data[0].display_name?.split(",")[0] || raw,
+            source: "nominatim",
+          };
+        }
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    // Fallback déterministe autour de Dakar (commande non bloquée)
+    const h = Array.from(raw).reduce((a, c) => a + c.charCodeAt(0), 0);
+    return {
+      lat: 14.7167 + ((h % 20) - 10) * 0.002,
+      lng: -17.4677 + ((h % 17) - 8) * 0.002,
+      label: raw,
+      source: "fallback",
+    };
+  };
+
   /**
    * Capturer la position client pour une livraison
    * @returns {{ lat, lng, accuracy, label, source, at }}
@@ -362,6 +438,7 @@
     isSupported,
     getCurrentPosition,
     reverseGeocode,
+    geocodeAddress,
     captureClientGps,
     getLiveGps,
     setLiveGps,
